@@ -1,0 +1,316 @@
+"""
+Backtest Module - Test strategy on historical data and calculate pip results
+"""
+
+import pandas as pd
+import numpy as np
+import yfinance as yf
+from datetime import datetime, timedelta
+import warnings
+warnings.filterwarnings('ignore')
+
+import config
+from utils.indicators import add_all_indicators, prepare_features
+from utils.model_loader import load_model
+import os
+
+
+class GoldBacktester:
+    """Backtester for Gold Signal Bot"""
+    
+    def __init__(self, days=None, model_path=config.MODEL_PATH):
+        """
+        Initialize backtester
+        
+        Args:
+            days: Number of days to backtest (default from config.BACKTEST_PERIOD_DAYS)
+            model_path: Path to trained model
+        """
+        if days is None:
+            days = config.BACKTEST_PERIOD_DAYS
+        self.days = days
+        self.model_path = model_path
+        self.model = load_model(model_path)
+        self.trades = []
+        self.ticker = config.TICKER
+        self.interval = config.INTERVAL
+        
+        if self.model is None:
+            raise Exception("Model not found. Please run train_model.py first.")
+    
+    def fetch_data(self):
+        """Fetch historical data for backtest period"""
+        print(f"\n📊 Fetching {self.days} days of historical data...")
+        print(f"   Ticker: {self.ticker}")
+        print(f"   Interval: {self.interval}")
+        
+        try:
+            data = yf.download(
+                self.ticker,
+                period=f"{self.days}d",
+                interval=self.interval,
+                progress=False
+            )
+            
+            if data.empty:
+                print(f"❌ No data retrieved for {self.ticker}")
+                return None
+            
+            print(f"✅ Downloaded {len(data)} candles")
+            return data
+        
+        except Exception as e:
+            print(f"❌ Error fetching data: {e}")
+            return None
+    
+    def run_backtest(self):
+        """Run backtest on historical data"""
+        data = self.fetch_data()
+        if data is None:
+            return
+        
+        print(f"\n🔄 Running backtest on {self.days} days of data...")
+        
+        # Add indicators
+        data_with_indicators = add_all_indicators(data)
+        
+        if len(data_with_indicators) == 0:
+            print("❌ Not enough data to compute indicators")
+            return
+        
+        # Prepare features
+        X, _ = prepare_features(data_with_indicators)
+        
+        # Make predictions with probabilities
+        predictions = self.model.predict(X)
+        probabilities = self.model.predict_proba(X)
+        
+        # Create results dataframe
+        results_df = data_with_indicators.copy()
+        results_df['Prediction'] = predictions
+        results_df['Prob_Up'] = probabilities[:, 1]
+        results_df['Prob_Down'] = probabilities[:, 0]
+        results_df['Prev_Prediction'] = results_df['Prediction'].shift(1)
+        
+        # Track trades and filters
+        prev_prediction = None
+        confidence_rejects = 0
+        macd_rejects = 0
+        signals_generated = 0
+        
+        print(f"\n🎯 Generating signals...")
+        
+        for idx in range(len(results_df)):
+            timestamp = results_df.index[idx]
+            current_price = float(results_df['Close'].iloc[idx])
+            curr_pred = int(results_df['Prediction'].iloc[idx])
+            prev_pred = results_df['Prev_Prediction'].iloc[idx]
+            prob_up = float(results_df['Prob_Up'].iloc[idx])
+            prob_down = float(results_df['Prob_Down'].iloc[idx])
+            confidence = float(max(prob_up, prob_down))
+            
+            # Skip first row (no previous prediction)
+            if pd.isna(prev_pred):
+                continue
+            
+            prev_pred = int(prev_pred)
+            latest_row = results_df.iloc[idx]
+            macd_val = float(latest_row['MACD'])
+            macd_sig = float(latest_row['MACD_Signal'])
+            rsi_val = float(latest_row['RSI'])
+            macd_ok_buy = bool((macd_val > macd_sig) and (rsi_val > config.RSI_BUY_MIN))
+            macd_ok_sell = bool((macd_val < macd_sig) and (rsi_val < config.RSI_SELL_MAX))
+            
+            # Confidence gate
+            if confidence < float(config.PROB_THRESHOLD):
+                confidence_rejects += 1
+                self._check_trade_exits(current_price, idx)
+                continue
+            
+            # BUY signal: previous = 0, current = 1
+            if (prev_pred == 0) and (curr_pred == 1) and macd_ok_buy:
+                sl = round(current_price * (1 - config.STOP_LOSS_PERCENT), 2)
+                tp = round(current_price * (1 + config.TAKE_PROFIT_PERCENT), 2)
+                
+                self.trades.append({
+                    'timestamp': timestamp,
+                    'type': 'BUY',
+                    'entry_price': current_price,
+                    'sl': sl,
+                    'tp': tp,
+                    'close_price': None,
+                    'close_reason': None,
+                    'pips': None,
+                    'status': 'Open',
+                    'confidence': confidence
+                })
+                signals_generated += 1
+            
+            # SELL signal: previous = 1, current = 0
+            elif (prev_pred == 1) and (curr_pred == 0) and macd_ok_sell:
+                sl = round(current_price * (1 + config.STOP_LOSS_PERCENT), 2)
+                tp = round(current_price * (1 - config.TAKE_PROFIT_PERCENT), 2)
+                
+                self.trades.append({
+                    'timestamp': timestamp,
+                    'type': 'SELL',
+                    'entry_price': current_price,
+                    'sl': sl,
+                    'tp': tp,
+                    'close_price': None,
+                    'close_reason': None,
+                    'pips': None,
+                    'status': 'Open',
+                    'confidence': confidence
+                })
+                signals_generated += 1
+            else:
+                # MACD/RSI gate failed
+                macd_rejects += 1
+            
+            # Check if any open trades hit SL or TP
+            self._check_trade_exits(current_price, idx)
+        
+        self._print_results(signals_generated, confidence_rejects, macd_rejects)
+    
+    def _check_trade_exits(self, current_price, idx):
+        """Check if open trades hit SL or TP"""
+        for trade in self.trades:
+            if trade['status'] == 'Open':
+                if trade['type'] == 'BUY':
+                    # Check SL
+                    if current_price <= trade['sl']:
+                        trade['close_price'] = trade['sl']
+                        trade['close_reason'] = 'SL_HIT'
+                        # For Gold: pips = price_diff * 10 (each 0.1 = 1 pip)
+                        trade['pips'] = (trade['sl'] - trade['entry_price']) * 10
+                        trade['status'] = 'Closed'
+                    # Check TP
+                    elif current_price >= trade['tp']:
+                        trade['close_price'] = trade['tp']
+                        trade['close_reason'] = 'TP_HIT'
+                        trade['pips'] = (trade['tp'] - trade['entry_price']) * 10
+                        trade['status'] = 'Closed'
+                
+                elif trade['type'] == 'SELL':
+                    # Check SL
+                    if current_price >= trade['sl']:
+                        trade['close_price'] = trade['sl']
+                        trade['close_reason'] = 'SL_HIT'
+                        trade['pips'] = (trade['entry_price'] - trade['sl']) * 10
+                        trade['status'] = 'Closed'
+                    # Check TP
+                    elif current_price <= trade['tp']:
+                        trade['close_price'] = trade['tp']
+                        trade['close_reason'] = 'TP_HIT'
+                        trade['pips'] = (trade['entry_price'] - trade['tp']) * 10
+                        trade['status'] = 'Closed'
+    
+    def _print_results(self, signals_generated, confidence_rejects, macd_rejects):
+        """Print backtest results with monthly breakdown"""
+        lines = []
+        lines.append("\n" + "="*70)
+        lines.append("BACKTEST RESULTS - GOLD SIGNAL BOT")
+        lines.append("="*70)
+        lines.append(f"\nFilter stats: signals={signals_generated}, confidence rejects={confidence_rejects}, macd/rsi rejects={macd_rejects}")
+        
+        if not self.trades:
+            lines.append("❌ No trades generated during backtest period")
+            print("\n".join(lines))
+            return
+        
+        closed_trades = [t for t in self.trades if t['status'] == 'Closed']
+        open_trades = [t for t in self.trades if t['status'] == 'Open']
+        
+        lines.append("\n📊 TRADE SUMMARY:")
+        lines.append(f"   Total Signals: {len(self.trades)}")
+        lines.append(f"   Closed Trades: {len(closed_trades)}")
+        lines.append(f"   Open Trades: {len(open_trades)}")
+        
+        # Overall metrics
+        if closed_trades:
+            pips_list = [t['pips'] for t in closed_trades if t['pips'] is not None]
+            if pips_list:
+                total_pips = sum(pips_list)
+                winning_trades = len([p for p in pips_list if p > 0])
+                losing_trades = len([p for p in pips_list if p < 0])
+                win_rate = (winning_trades / len(pips_list) * 100) if pips_list else 0
+                lines.append("\n💰 P&L METRICS (Total):")
+                lines.append(f"   Total Pips: {total_pips:.2f}")
+                lines.append(f"   Winning Trades: {winning_trades} ✅")
+                lines.append(f"   Losing Trades: {losing_trades} ❌")
+                lines.append(f"   Win Rate: {win_rate:.2f}%")
+                if winning_trades > 0:
+                    avg_win = np.mean([p for p in pips_list if p > 0])
+                    lines.append(f"   Avg Win: {avg_win:.2f} pips")
+                if losing_trades > 0:
+                    avg_loss = np.mean([p for p in pips_list if p < 0])
+                    lines.append(f"   Avg Loss: {avg_loss:.2f} pips")
+                if winning_trades > 0 and losing_trades > 0:
+                    avg_win = np.mean([p for p in pips_list if p > 0])
+                    avg_loss = abs(np.mean([p for p in pips_list if p < 0]))
+                    profit_factor = avg_win * winning_trades / (avg_loss * losing_trades)
+                    lines.append(f"   Profit Factor: {profit_factor:.2f}")
+        
+        # Monthly breakdown (by close timestamp)
+        if closed_trades:
+            month_buckets = {}
+            for t in closed_trades:
+                ts = t['timestamp']
+                month_key = ts.strftime('%Y-%m') if hasattr(ts, 'strftime') else str(ts)[:7]
+                month_buckets.setdefault(month_key, []).append(t)
+            lines.append("\n📅 MONTHLY P&L (by close date):")
+            for month in sorted(month_buckets.keys()):
+                trades = month_buckets[month]
+                pips = [tr['pips'] for tr in trades if tr['pips'] is not None]
+                total_pips = sum(pips) if pips else 0.0
+                wins = len([p for p in pips if p > 0])
+                losses = len([p for p in pips if p < 0])
+                win_rate = (wins / len(pips) * 100) if pips else 0
+                if wins > 0 and losses > 0:
+                    avg_win = np.mean([p for p in pips if p > 0])
+                    avg_loss = abs(np.mean([p for p in pips if p < 0]))
+                    profit_factor = avg_win * wins / (avg_loss * losses)
+                else:
+                    profit_factor = float('inf') if wins > 0 else 0.0
+                lines.append(f"   {month}: Total Pips={total_pips:.2f} | Trades={len(pips)} (✅{wins} wins, ❌{losses} losses) | WinRate={win_rate:.1f}% | ProfitFactor={profit_factor:.2f}")
+        
+        # Detailed closed trades
+        if closed_trades:
+            lines.append("\n📋 CLOSED TRADE DETAILS:")
+            lines.append("-"*70)
+            for i, trade in enumerate(closed_trades, 1):
+                pips_emoji = "✅" if trade['pips'] > 0 else "❌"
+                lines.append(f"\nTrade #{i} | {trade['type']:4s} | Pips: {trade['pips']:7.2f} {pips_emoji}")
+                lines.append(f"  Entry: {trade['entry_price']:.2f} @ {trade['timestamp']}")
+                lines.append(f"  Exit:  {trade['close_price']:.2f} ({trade['close_reason']})")
+                lines.append(f"  SL: {trade['sl']:.2f} | TP: {trade['tp']:.2f}")
+        
+        lines.append("\n" + "="*70)
+        output_text = "\n".join(lines)
+        print(output_text)
+        os.makedirs(config.DATA_DIR, exist_ok=True)
+        report_path = os.path.join(config.DATA_DIR, "backtest_report.txt")
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(output_text)
+        print(f"\n📝 Backtest report saved to: {report_path}")
+
+
+def main():
+    """Run backtest"""
+    print("\n" + "="*70)
+    print("🚀 ML GOLD SIGNAL BOT - BACKTEST")
+    print("="*70)
+    
+    try:
+        # Backtest period from config
+        backtester = GoldBacktester()
+        backtester.run_backtest()
+    
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        print("Please ensure the model is trained first: python train_model.py")
+
+
+if __name__ == "__main__":
+    main()
