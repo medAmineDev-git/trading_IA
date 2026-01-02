@@ -649,5 +649,332 @@
             },
             "timestamp": "2026-01-02T18:38:00.917524"
         }
+    },
+    {
+        "id": "6bcef529-007c-497c-a82c-6ae389c9ab50",
+        "name": "Strategy 2026-01-02 21:08",
+        "training": {
+            "params": {
+                "indicators": {
+                    "rsi_period": 14,
+                    "macd_fast": 12,
+                    "macd_slow": 26,
+                    "macd_signal": 9,
+                    "bb_period": 20,
+                    "bb_std_dev": 2,
+                    "atr_period": 14,
+                    "ema_fast": 50,
+                    "ema_slow": 200
+                },
+                "risk": {
+                    "stop_loss_percent": 0.005,
+                    "take_profit_percent": 0.015,
+                    "prob_threshold": 0.6,
+                    "use_atr_stops": true,
+                    "use_trend_filter": true
+                },
+                "model": {
+                    "model_type": "lightgbm",
+                    "n_estimators": 300,
+                    "max_depth": 6,
+                    "min_samples_split": 5
+                },
+                "data": {
+                    "csv_path": "C:\\Users\\a.aouidane\\projects\\IA-projects\\gold-signal-bot\\data\\XAUUSD_h1.csv",
+                    "training_period": "1y"
+                }
+            },
+            "metadata": {
+                "Training Date": "2026-01-02 21:08:25",
+                "Accuracy": "0.4945",
+                "Training Samples": "19997",
+                "Test Samples": "19997",
+                "Features": "12",
+                "Ticker": "XAUUSD",
+                "Interval": "D1",
+                "Period": "100000 bars",
+                "Model Type": "lightgbm",
+                "N_Estimators": "300",
+                "Max_Depth": "6",
+                "Min_Samples_Split": "5",
+                "Prob_Threshold": "0.6"
+            },
+            "timestamp": "2026-01-02T21:08:25.560387"
+        },
+        "backtest": {
+            "metrics": {
+                "total_pips": -2178.99,
+                "total_trades": 48,
+                "closed_trades": 47,
+                "winning_trades": 11,
+                "losing_trades": 36,
+                "win_rate": 23.4,
+                "avg_win": 851.0,
+                "avg_loss": -320.55,
+                "profit_factor": 2.65
+            },
+            "timestamp": "2026-01-02T21:08:31.846047"
+        }
+    },
+    {
+        "id": "4aebc561-419d-4728-a9bc-f383b6503a1d",
+        "name": "Strategy 2026-01-02 21:15",
+        "training": {
+            "params": {
+                "indicators": {
+                    "rsi_period": 14,
+                    "macd_fast": 12,
+                    "macd_slow": 26,
+                    "macd_signal": 9,
+                    "bb_period": 20,
+                    "bb_std_dev": 2,
+                    "atr_period": 14,
+                    "ema_fast": 50,
+                    "ema_slow": 200
+                },
+                "risk": {
+                    "stop_loss_percent": 0.005,
+                    "take_profit_percent": 0.015,
+                    "prob_threshold": 0.5,
+                    "use_atr_stops": true,
+                    "use_trend_filter": true
+                },
+                "model": {
+                    "model_type": "xgboost",
+                    "n_estimators": 300,
+                    "max_depth": 6,
+                    "min_samples_split": 5
+                },
+                "data": {
+                    "csv_path": "C:\\Users\\a.aouidane\\projects\\IA-projects\\gold-signal-bot\\data\\XAUUSD_h1.csv",
+                    "training_period": "1y"
+                }
+            },
+            "metadata": {
+                "Training Date": "2026-01-02 12:36:21",
+                "Accuracy": "0.4721",
+                "Training Samples": "1038",
+                "Test Samples": "1038",
+                "Features": "12",
+                "Ticker": "XAUUSD",
+                "Interval": "D1",
+                "Period": "5207 bars",
+                "N_Estimators": "300",
+                "Max_Depth": "6",
+                "Min_Samples_Split": "5",
+                "Prob_Threshold": "0.5"
+            },
+            "timestamp": "2026-01-02T21:14:52.089893"
+        },
+        "backtest": {
+            "metrics": {
+                "total_pips": 1213.06,
+                "total_trades": 92,
+                "closed_trades": 91,
+                "winning_trades": 33,
+                "losing_trades": 58,
+                "win_rate": 36.26,
+                "avg_win": 469.37,
+                "avg_loss": -246.14,
+                "profit_factor": 1.91
+            },
+            "timestamp": "2026-01-02T21:15:05.823359"
+        },
+        "is_live": true
+    },
+    {
+        "id": "2ea0336a-b2c0-4f0a-a8bd-8b5441c4f67c",
+        "name": "Strategy 2026-01-02 21:17",
+        "training": {
+            "params": {
+                "indicators": {
+                    "rsi_period": 14,
+                    "macd_fast": 12,
+                    "macd_slow": 26,
+                    "macd_signal": 9,
+                    "bb_period": 20,
+                    "bb_std_dev": 2,
+                    "atr_period": 14,
+                    "ema_fast": 50,
+                    "ema_slow": 200
+                },
+                "risk": {
+                    "stop_loss_percent": 0.005,
+                    "take_profit_percent": 0.015,
+                    "prob_threshold": 0.7,
+                    "use_atr_stops": true,
+                    "use_trend_filter": true
+                },
+                "model": {
+                    "model_type": "xgboost",
+                    "n_estimators": 300,
+                    "max_depth": 6,
+                    "min_samples_split": 5
+                },
+                "data": {
+                    "csv_path": "C:\\Users\\a.aouidane\\projects\\IA-projects\\gold-signal-bot\\data\\XAUUSD_h1.csv",
+                    "training_period": "2y"
+                }
+            },
+            "metadata": {
+                "Training Date": "2026-01-02 12:36:21",
+                "Accuracy": "0.4721",
+                "Training Samples": "1038",
+                "Test Samples": "1038",
+                "Features": "12",
+                "Ticker": "XAUUSD",
+                "Interval": "D1",
+                "Period": "5207 bars",
+                "N_Estimators": "300",
+                "Max_Depth": "6",
+                "Min_Samples_Split": "5",
+                "Prob_Threshold": "0.5"
+            },
+            "timestamp": "2026-01-02T21:17:17.580656"
+        },
+        "backtest": {
+            "metrics": {
+                "total_pips": 0,
+                "total_trades": 0,
+                "closed_trades": 0,
+                "winning_trades": 0,
+                "losing_trades": 0,
+                "win_rate": 0,
+                "avg_win": 0,
+                "avg_loss": 0,
+                "profit_factor": 0
+            },
+            "timestamp": "2026-01-02T21:17:28.807177"
+        }
+    },
+    {
+        "id": "0c1b893e-4b4c-4c48-824c-5ec0f2e045d5",
+        "name": "Strategy 2026-01-02 21:18",
+        "training": {
+            "params": {
+                "indicators": {
+                    "rsi_period": 14,
+                    "macd_fast": 12,
+                    "macd_slow": 26,
+                    "macd_signal": 9,
+                    "bb_period": 20,
+                    "bb_std_dev": 2,
+                    "atr_period": 14,
+                    "ema_fast": 50,
+                    "ema_slow": 200
+                },
+                "risk": {
+                    "stop_loss_percent": 0.005,
+                    "take_profit_percent": 0.015,
+                    "prob_threshold": 0.7,
+                    "use_atr_stops": true,
+                    "use_trend_filter": true
+                },
+                "model": {
+                    "model_type": "xgboost",
+                    "n_estimators": 300,
+                    "max_depth": 6,
+                    "min_samples_split": 5
+                },
+                "data": {
+                    "csv_path": "C:\\Users\\a.aouidane\\projects\\IA-projects\\gold-signal-bot\\data\\XAUUSD_h1.csv",
+                    "training_period": "2y"
+                }
+            },
+            "metadata": {
+                "Training Date": "2026-01-02 12:36:21",
+                "Accuracy": "0.4721",
+                "Training Samples": "1038",
+                "Test Samples": "1038",
+                "Features": "12",
+                "Ticker": "XAUUSD",
+                "Interval": "D1",
+                "Period": "5207 bars",
+                "N_Estimators": "300",
+                "Max_Depth": "6",
+                "Min_Samples_Split": "5",
+                "Prob_Threshold": "0.5"
+            },
+            "timestamp": "2026-01-02T21:18:10.116714"
+        },
+        "backtest": {
+            "metrics": {
+                "total_pips": 0,
+                "total_trades": 0,
+                "closed_trades": 0,
+                "winning_trades": 0,
+                "losing_trades": 0,
+                "win_rate": 0,
+                "avg_win": 0,
+                "avg_loss": 0,
+                "profit_factor": 0
+            },
+            "timestamp": "2026-01-02T21:18:14.825135"
+        }
+    },
+    {
+        "id": "57a9ed6b-d931-4cd9-9a9f-d855548a1f15",
+        "name": "Strategy 2026-01-02 21:19",
+        "training": {
+            "params": {
+                "indicators": {
+                    "rsi_period": 14,
+                    "macd_fast": 12,
+                    "macd_slow": 26,
+                    "macd_signal": 9,
+                    "bb_period": 20,
+                    "bb_std_dev": 2,
+                    "atr_period": 14,
+                    "ema_fast": 50,
+                    "ema_slow": 200
+                },
+                "risk": {
+                    "stop_loss_percent": 0.005,
+                    "take_profit_percent": 0.015,
+                    "prob_threshold": 0.55,
+                    "use_atr_stops": true,
+                    "use_trend_filter": true
+                },
+                "model": {
+                    "model_type": "xgboost",
+                    "n_estimators": 300,
+                    "max_depth": 6,
+                    "min_samples_split": 5
+                },
+                "data": {
+                    "csv_path": "C:\\Users\\a.aouidane\\projects\\IA-projects\\gold-signal-bot\\data\\XAUUSD_h1.csv",
+                    "training_period": "2y"
+                }
+            },
+            "metadata": {
+                "Training Date": "2026-01-02 12:36:21",
+                "Accuracy": "0.4721",
+                "Training Samples": "1038",
+                "Test Samples": "1038",
+                "Features": "12",
+                "Ticker": "XAUUSD",
+                "Interval": "D1",
+                "Period": "5207 bars",
+                "N_Estimators": "300",
+                "Max_Depth": "6",
+                "Min_Samples_Split": "5",
+                "Prob_Threshold": "0.5"
+            },
+            "timestamp": "2026-01-02T21:19:12.730318"
+        },
+        "backtest": {
+            "metrics": {
+                "total_pips": 229.37,
+                "total_trades": 14,
+                "closed_trades": 14,
+                "winning_trades": 5,
+                "losing_trades": 9,
+                "win_rate": 35.71,
+                "avg_win": 385.65,
+                "avg_loss": -188.76,
+                "profit_factor": 2.04
+            },
+            "timestamp": "2026-01-02T21:19:17.632756"
+        }
     }
 ]

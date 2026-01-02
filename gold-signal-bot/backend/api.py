@@ -69,45 +69,56 @@ def update_job_status(job_id, status, progress=0, message='', result=None):
         job_results[job_id] = result
 
 
+def sync_config(params):
+    """Update global config with custom parameters"""
+    if 'indicators' in params:
+        ind = params['indicators']
+        config.RSI_PERIOD = ind.get('rsi_period', config.RSI_PERIOD)
+        config.MACD_FAST = ind.get('macd_fast', config.MACD_FAST)
+        config.MACD_SLOW = ind.get('macd_slow', config.MACD_SLOW)
+        config.MACD_SIGNAL = ind.get('macd_signal', config.MACD_SIGNAL)
+        config.BB_PERIOD = ind.get('bb_period', config.BB_PERIOD)
+        config.BB_STD_DEV = ind.get('bb_std_dev', config.BB_STD_DEV)
+        config.ATR_PERIOD = ind.get('atr_period', config.ATR_PERIOD)
+        config.EMA_FAST = ind.get('ema_fast', config.EMA_FAST)
+        config.EMA_SLOW = ind.get('ema_slow', config.EMA_SLOW)
+    
+    if 'risk' in params:
+        risk = params['risk']
+        config.STOP_LOSS_PERCENT = risk.get('stop_loss_percent', config.STOP_LOSS_PERCENT)
+        config.TAKE_PROFIT_PERCENT = risk.get('take_profit_percent', config.TAKE_PROFIT_PERCENT)
+        config.PROB_THRESHOLD = risk.get('prob_threshold', config.PROB_THRESHOLD)
+        config.USE_ATR_STOPS = risk.get('use_atr_stops', config.USE_ATR_STOPS)
+        config.USE_TREND_FILTER = risk.get('use_trend_filter', config.USE_TREND_FILTER)
+    
+    if 'model' in params:
+        model = params['model']
+        config.MODEL_TYPE = model.get('model_type', config.MODEL_TYPE)
+        config.N_ESTIMATORS = model.get('n_estimators', config.N_ESTIMATORS)
+        config.MAX_DEPTH = model.get('max_depth', config.MAX_DEPTH)
+        config.MIN_SAMPLES_SPLIT = model.get('min_samples_split', config.MIN_SAMPLES_SPLIT)
+    
+    if 'data' in params:
+        data = params['data']
+        if 'csv_path' in data and data['csv_path']:
+            # Handle both absolute and relative paths
+            csv_path = data['csv_path']
+            if not os.path.isabs(csv_path):
+                # Join with project root (config.BASE_DIR)
+                config.MT5_CSV_PATH = os.path.join(config.BASE_DIR, csv_path)
+            else:
+                config.MT5_CSV_PATH = csv_path
+        if 'training_period' in data:
+            config.TRAINING_PERIOD = data['training_period']
+
+
 def run_training_job(job_id, params):
     """Run training in background thread"""
     try:
         update_job_status(job_id, JobStatus.RUNNING, 10, 'Updating configuration...')
         
         # Update config with custom parameters
-        if 'indicators' in params:
-            ind = params['indicators']
-            config.RSI_PERIOD = ind.get('rsi_period', config.RSI_PERIOD)
-            config.MACD_FAST = ind.get('macd_fast', config.MACD_FAST)
-            config.MACD_SLOW = ind.get('macd_slow', config.MACD_SLOW)
-            config.MACD_SIGNAL = ind.get('macd_signal', config.MACD_SIGNAL)
-            config.BB_PERIOD = ind.get('bb_period', config.BB_PERIOD)
-            config.BB_STD_DEV = ind.get('bb_std_dev', config.BB_STD_DEV)
-            config.ATR_PERIOD = ind.get('atr_period', config.ATR_PERIOD)
-            config.EMA_FAST = ind.get('ema_fast', config.EMA_FAST)
-            config.EMA_SLOW = ind.get('ema_slow', config.EMA_SLOW)
-        
-        if 'risk' in params:
-            risk = params['risk']
-            config.STOP_LOSS_PERCENT = risk.get('stop_loss_percent', config.STOP_LOSS_PERCENT)
-            config.TAKE_PROFIT_PERCENT = risk.get('take_profit_percent', config.TAKE_PROFIT_PERCENT)
-            config.PROB_THRESHOLD = risk.get('prob_threshold', config.PROB_THRESHOLD)
-            config.USE_ATR_STOPS = risk.get('use_atr_stops', config.USE_ATR_STOPS)
-            config.USE_TREND_FILTER = risk.get('use_trend_filter', config.USE_TREND_FILTER)
-        
-        if 'model' in params:
-            model = params['model']
-            config.MODEL_TYPE = model.get('model_type', config.MODEL_TYPE)
-            config.N_ESTIMATORS = model.get('n_estimators', config.N_ESTIMATORS)
-            config.MAX_DEPTH = model.get('max_depth', config.MAX_DEPTH)
-            config.MIN_SAMPLES_SPLIT = model.get('min_samples_split', config.MIN_SAMPLES_SPLIT)
-        
-        if 'data' in params:
-            data = params['data']
-            if 'csv_path' in data:
-                config.MT5_CSV_PATH = data['csv_path']
-            if 'training_period' in data:
-                config.TRAINING_PERIOD = data['training_period']
+        sync_config(params)
         
         update_job_status(job_id, JobStatus.RUNNING, 30, 'Starting training...')
         
@@ -158,9 +169,11 @@ def run_training_job(job_id, params):
 def run_backtest_job(job_id, params):
     """Run backtest in background thread"""
     try:
-        update_job_status(job_id, JobStatus.RUNNING, 10, 'Initializing backtest...')
+        update_job_status(job_id, JobStatus.RUNNING, 10, 'Updating configuration...')
         
         # Update config if needed
+        sync_config(params)
+        
         if 'period_days' in params:
             config.BACKTEST_PERIOD_DAYS = params['period_days']
         
