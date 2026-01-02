@@ -1,0 +1,195 @@
+<div class="training-container">
+  <!-- Parameters Summary -->
+  <mat-card class="summary-card" *ngIf="params">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>summarize</mat-icon>
+      <mat-card-title>Configuration Summary</mat-card-title>
+      <mat-card-subtitle
+        >Review your parameters before training</mat-card-subtitle
+      >
+    </mat-card-header>
+    <mat-card-content>
+      <div class="summary-grid">
+        <div class="summary-section">
+          <h3>Indicators</h3>
+          <p><strong>RSI:</strong> {{ params.indicators.rsi_period }}</p>
+          <p>
+            <strong>MACD:</strong> {{ params.indicators.macd_fast }}/{{
+              params.indicators.macd_slow
+            }}/{{ params.indicators.macd_signal }}
+          </p>
+          <p>
+            <strong>BB:</strong> {{ params.indicators.bb_period }} (±{{
+              params.indicators.bb_std_dev
+            }}σ)
+          </p>
+          <p>
+            <strong>EMA:</strong> {{ params.indicators.ema_fast }}/{{
+              params.indicators.ema_slow
+            }}
+          </p>
+        </div>
+
+        <div class="summary-section">
+          <h3>Risk Management</h3>
+          <p>
+            <strong>Stop Loss:</strong>
+            {{ (params.risk.stop_loss_percent * 100).toFixed(2) }}%
+          </p>
+          <p>
+            <strong>Take Profit:</strong>
+            {{ (params.risk.take_profit_percent * 100).toFixed(2) }}%
+          </p>
+          <p>
+            <strong>Confidence:</strong>
+            {{ (params.risk.prob_threshold * 100).toFixed(0) }}%
+          </p>
+          <p>
+            <strong>ATR Stops:</strong>
+            {{ params.risk.use_atr_stops ? "Yes" : "No" }}
+          </p>
+        </div>
+
+        <div class="summary-section">
+          <h3>Model</h3>
+          <p>
+            <strong>Architecture:</strong>
+            {{ getModelDisplayName() }}
+          </p>
+          <p><strong>Trees:</strong> {{ params.model.n_estimators }}</p>
+          <p><strong>Max Depth:</strong> {{ params.model.max_depth }}</p>
+          <p>
+            <strong>Min Split:</strong> {{ params.model.min_samples_split }}
+          </p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Training Action -->
+  <mat-card class="action-card">
+    <mat-card-content>
+      <div class="action-content">
+        <div class="action-info">
+          <mat-icon class="large-icon">model_training</mat-icon>
+          <div>
+            <h2>Train Model</h2>
+            <p>
+              This will train a
+              {{ getModelDisplayName() }}
+              model with your configured parameters
+            </p>
+          </div>
+        </div>
+
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="startTraining()"
+          [disabled]="isTraining || !params"
+          class="train-button"
+        >
+          <mat-icon>play_arrow</mat-icon>
+          {{ isTraining ? "Training..." : "Start Training" }}
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Training Progress -->
+  <mat-card class="progress-card" *ngIf="isTraining">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="spinning">sync</mat-icon>
+      <mat-card-title>Training in Progress</mat-card-title>
+      <mat-card-subtitle>{{ trainingStatus }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-progress-bar
+        mode="determinate"
+        [value]="trainingProgress"
+        class="progress-bar"
+      >
+      </mat-progress-bar>
+      <p class="progress-text">{{ trainingProgress }}% Complete</p>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Error Display -->
+  <mat-card class="error-card" *ngIf="error">
+    <mat-card-header>
+      <mat-icon mat-card-avatar color="warn">error</mat-icon>
+      <mat-card-title>Training Failed</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="error-message">{{ error }}</p>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Training Results -->
+  <mat-card class="results-card" *ngIf="trainingResults">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="success-icon">check_circle</mat-icon>
+      <mat-card-title>Training Complete!</mat-card-title>
+      <mat-card-subtitle>Model trained successfully</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value positive">
+            {{ getMetadataValue("Accuracy") }}
+          </div>
+          <div class="metric-label">Accuracy</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-value neutral">
+            {{ getMetadataValue("Training Samples") }}
+          </div>
+          <div class="metric-label">Training Samples</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-value neutral">
+            {{ getMetadataValue("Test Samples") }}
+          </div>
+          <div class="metric-label">Test Samples</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-value neutral">
+            {{ getMetadataValue("Features") }}
+          </div>
+          <div class="metric-label">Features</div>
+        </div>
+      </div>
+
+      <div class="metadata-section">
+        <h3>Model Details</h3>
+        <div class="metadata-grid">
+          <div><strong>Ticker:</strong> {{ getMetadataValue("Ticker") }}</div>
+          <div>
+            <strong>Interval:</strong> {{ getMetadataValue("Interval") }}
+          </div>
+          <div><strong>Period:</strong> {{ getMetadataValue("Period") }}</div>
+          <div>
+            <strong>Trees:</strong> {{ getMetadataValue("N_Estimators") }}
+          </div>
+          <div>
+            <strong>Max Depth:</strong> {{ getMetadataValue("Max_Depth") }}
+          </div>
+          <div>
+            <strong>Threshold:</strong> {{ getMetadataValue("Prob_Threshold") }}
+          </div>
+        </div>
+      </div>
+
+      <div class="next-step">
+        <mat-icon>arrow_forward</mat-icon>
+        <p>
+          Model saved! You can now proceed to the Backtest tab to test your
+          strategy.
+        </p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

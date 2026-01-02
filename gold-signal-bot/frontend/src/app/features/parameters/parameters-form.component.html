@@ -1,0 +1,240 @@
+<div class="parameters-container">
+  <div class="actions-bar top-bar">
+    <div class="form-status">
+      <mat-icon
+        [class.valid]="parametersForm.valid"
+        [class.invalid]="!parametersForm.valid"
+      >
+        {{ parametersForm.valid ? "check_circle" : "error" }}
+      </mat-icon>
+      <span>
+        Configuration Status:
+        <strong>{{ parametersForm.valid ? "Valid" : "Invalid" }}</strong>
+      </span>
+    </div>
+    <button mat-stroked-button color="warn" (click)="resetToDefaults()">
+      <mat-icon>restart_alt</mat-icon>
+      Reset to Defaults
+    </button>
+  </div>
+
+  <form [formGroup]="parametersForm" class="parameters-form">
+    <!-- Active Section: Model Selection -->
+    <mat-card class="section-card active-section">
+      <mat-card-header>
+        <mat-icon mat-card-avatar color="primary">psychology</mat-icon>
+        <mat-card-title>Model Architecture</mat-card-title>
+        <mat-card-subtitle>Select your AI engine</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="full-width-col">
+          <mat-form-field class="full-width">
+            <mat-label>Model Type</mat-label>
+            <mat-select formControlName="model_type">
+              <mat-option value="xgboost"
+                >XGBoost (Gradient Boosting)</mat-option
+              >
+              <mat-option value="lightgbm"
+                >LightGBM (Fast Gradient Boosting)</mat-option
+              >
+              <mat-option value="rf">Random Forest (Bagging)</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="model-description-box" *ngIf="selectedModelDescription">
+            <mat-icon class="info-icon-inline">info</mat-icon>
+            <p>{{ selectedModelDescription }}</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Advanced Parameters (Locked/Premium) -->
+    <mat-card class="section-card advanced-section disabled-look">
+      <div class="premium-overlay">
+        <mat-icon class="premium-badge">workspace_premium</mat-icon>
+      </div>
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="premium-icon"
+          >workspace_premium</mat-icon
+        >
+        <mat-card-title class="premium-text"
+          >Advanced Parameters</mat-card-title
+        >
+        <mat-card-subtitle
+          >Technical Indicators & Hyperparameters (Locked)</mat-card-subtitle
+        >
+      </mat-card-header>
+      <mat-card-content>
+        <!-- Indicators -->
+        <h3 class="subsection-title">Technical Indicators</h3>
+        <div class="grid cols-3">
+          <mat-form-field>
+            <mat-label>RSI Period</mat-label>
+            <input matInput formControlName="rsi_period" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>MACD Fast</mat-label>
+            <input matInput formControlName="macd_fast" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>MACD Slow</mat-label>
+            <input matInput formControlName="macd_slow" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>MACD Signal</mat-label>
+            <input matInput formControlName="macd_signal" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>BB Period</mat-label>
+            <input matInput formControlName="bb_period" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>BB Std Dev</mat-label>
+            <input matInput formControlName="bb_std_dev" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>ATR Period</mat-label>
+            <input matInput formControlName="atr_period" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>EMA Fast</mat-label>
+            <input matInput formControlName="ema_fast" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>EMA Slow</mat-label>
+            <input matInput formControlName="ema_slow" [readonly]="true" />
+          </mat-form-field>
+        </div>
+
+        <mat-divider style="margin: 24px 0"></mat-divider>
+
+        <!-- Hyperparameters -->
+        <h3 class="subsection-title">Model Hyperparameters</h3>
+        <div class="grid cols-3">
+          <mat-form-field>
+            <mat-label>Estimators</mat-label>
+            <input matInput formControlName="n_estimators" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Max Depth</mat-label>
+            <input matInput formControlName="max_depth" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Min Split</mat-label>
+            <input
+              matInput
+              formControlName="min_samples_split"
+              [readonly]="true"
+            />
+          </mat-form-field>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Risk Management (Active) -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar color="accent">security</mat-icon>
+        <mat-card-title>Risk Management</mat-card-title>
+        <mat-card-subtitle>Protect your capital</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="grid cols-2">
+          <div class="slider-group">
+            <div class="label-row">
+              <label>Stop Loss: {{ stop_loss_percent.value }}%</label>
+              <mat-icon
+                class="info-icon"
+                matTooltip="Percentage of price movement against trade to close"
+                >help</mat-icon
+              >
+            </div>
+            <mat-slider min="0.1" max="5" step="0.1" showTickMarks>
+              <input matSliderThumb formControlName="stop_loss_percent" />
+            </mat-slider>
+          </div>
+
+          <div class="slider-group">
+            <div class="label-row">
+              <label>Take Profit: {{ take_profit_percent.value }}%</label>
+              <mat-icon
+                class="info-icon"
+                matTooltip="Percentage of price movement in favor to close"
+                >help</mat-icon
+              >
+            </div>
+            <mat-slider min="0.1" max="10" step="0.1" showTickMarks>
+              <input matSliderThumb formControlName="take_profit_percent" />
+            </mat-slider>
+          </div>
+
+          <div class="slider-group">
+            <div class="label-row">
+              <label
+                >Min Confidence:
+                {{ prob_threshold.value || 0 | percent }}</label
+              >
+              <mat-icon
+                class="info-icon"
+                matTooltip="Minimum model probability required to take a trade"
+                >help</mat-icon
+              >
+            </div>
+            <mat-slider min="0.5" max="0.95" step="0.05" showTickMarks>
+              <input matSliderThumb formControlName="prob_threshold" />
+            </mat-slider>
+          </div>
+
+          <div class="toggle-group">
+            <mat-slide-toggle
+              formControlName="use_atr_stops"
+              class="white-text-toggle"
+            >
+              Use ATR-based Stops
+            </mat-slide-toggle>
+            <mat-slide-toggle
+              formControlName="use_trend_filter"
+              class="white-text-toggle"
+            >
+              Use Trend Filter (EMA)
+            </mat-slide-toggle>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Data Source (Active) -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>storage</mat-icon>
+        <mat-card-title>Data Source</mat-card-title>
+        <mat-card-subtitle>Historical data selection</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="grid cols-2">
+          <mat-form-field>
+            <mat-label>MT5 CSV File</mat-label>
+            <mat-select formControlName="csv_path">
+              <mat-option *ngIf="loading" disabled>Loading...</mat-option>
+              <mat-option *ngFor="let file of dataFiles" [value]="file.path">
+                {{ file.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-label>Training Period</mat-label>
+            <mat-select formControlName="training_period">
+              <mat-option value="6mo">6 Months</mat-option>
+              <mat-option value="1y">1 Year</mat-option>
+              <mat-option value="2y">2 Years</mat-option>
+              <mat-option value="5y">5 Years</mat-option>
+            </mat-select>
+            <mat-hint>Amount of history to use</mat-hint>
+          </mat-form-field>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </form>
+</div>

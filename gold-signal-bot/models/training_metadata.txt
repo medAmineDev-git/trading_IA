@@ -1,12 +1,12 @@
-Training Date: 2026-01-01 14:22:36
-Accuracy: 0.4739
-Training Samples: 2296
-Test Samples: 2296
-Features: 8
-Ticker: GC=F
-Interval: 1h
-Period: 2y
+Training Date: 2026-01-02 12:36:21
+Accuracy: 0.4721
+Training Samples: 1038
+Test Samples: 1038
+Features: 12
+Ticker: XAUUSD
+Interval: D1
+Period: 5207 bars
 N_Estimators: 300
-Max_Depth: 12
-Min_Samples_Split: 4
+Max_Depth: 6
+Min_Samples_Split: 5
 Prob_Threshold: 0.5

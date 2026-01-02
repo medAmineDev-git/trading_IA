@@ -1,0 +1,155 @@
+<div class="strategies-container">
+  <div class="header-row">
+    <h2>
+      <mat-icon
+        color="primary"
+        style="vertical-align: middle; margin-right: 8px"
+        >military_tech</mat-icon
+      >Top Strategies
+    </h2>
+    <button mat-icon-button (click)="loadStrategies()" [disabled]="loading">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <div class="table-container">
+    <div class="loading-shade" *ngIf="loading">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+
+    <table
+      mat-table
+      [dataSource]="strategies"
+      class="strategy-table"
+      *ngIf="strategies.length > 0"
+    >
+      <!-- Model Column -->
+      <ng-container matColumnDef="model">
+        <th mat-header-cell *matHeaderCellDef>Model</th>
+        <td mat-cell *matCellDef="let strategy">
+          <span
+            class="model-badge"
+            [ngClass]="getModelClass(strategy.training.params.model.model_type)"
+          >
+            {{ strategy.training.params.model.model_type || "XGBoost" }}
+          </span>
+          <mat-icon
+            *ngIf="isTopPerformer(strategy)"
+            class="premium-badge"
+            style="
+              font-size: 16px;
+              width: 16px;
+              height: 16px;
+              vertical-align: middle;
+              margin-left: 8px;
+            "
+            matTooltip="Top Performer"
+            >verified</mat-icon
+          >
+        </td>
+      </ng-container>
+
+      <!-- Trades Column -->
+      <ng-container matColumnDef="trades">
+        <th mat-header-cell *matHeaderCellDef>Trades</th>
+        <td mat-cell *matCellDef="let strategy">
+          {{ strategy.backtest.metrics.total_trades }}
+        </td>
+      </ng-container>
+
+      <!-- Win Rate Column -->
+      <ng-container matColumnDef="winRate">
+        <th mat-header-cell *matHeaderCellDef>Win Rate</th>
+        <td mat-cell *matCellDef="let strategy">
+          <span
+            class="metric-chip"
+            [ngClass]="
+              strategy.backtest.metrics.win_rate >= 50 ? 'positive' : 'negative'
+            "
+          >
+            {{ strategy.backtest.metrics.win_rate }}%
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Profit Factor Column -->
+      <ng-container matColumnDef="profitFactor">
+        <th mat-header-cell *matHeaderCellDef>Profit Factor</th>
+        <td mat-cell *matCellDef="let strategy">
+          {{ strategy.backtest.metrics.profit_factor }}
+        </td>
+      </ng-container>
+
+      <!-- Pips Column -->
+      <ng-container matColumnDef="pips">
+        <th mat-header-cell *matHeaderCellDef>Total Pips</th>
+        <td mat-cell *matCellDef="let strategy">
+          <span
+            class="metric-chip"
+            [ngClass]="
+              strategy.backtest.metrics.total_pips >= 0
+                ? 'positive'
+                : 'negative'
+            "
+          >
+            {{ strategy.backtest.metrics.total_pips > 0 ? "+" : ""
+            }}{{ strategy.backtest.metrics.total_pips }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Connected Clients Column -->
+      <ng-container matColumnDef="connectedClients">
+        <th mat-header-cell *matHeaderCellDef>Connected Clients</th>
+        <td mat-cell *matCellDef="let strategy">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px"
+              >group</mat-icon
+            >
+            {{ strategy.connectedClients }}
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let strategy">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <mat-slide-toggle
+              [checked]="strategy.is_live"
+              (change)="toggleLive(strategy)"
+              color="accent"
+              matTooltip="Go Live"
+            >
+              <span class="live-status-label" [class.active]="strategy.is_live">
+                {{ strategy.is_live ? "LIVE" : "OFF" }}
+              </span>
+            </mat-slide-toggle>
+
+            <button
+              mat-stroked-button
+              class="telegram-btn"
+              (click)="joinTelegram(strategy)"
+            >
+              <mat-icon>send</mat-icon>
+              Join Signals
+            </button>
+          </div>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr
+        mat-row
+        *matRowDef="let row; columns: displayedColumns"
+        [ngClass]="{ 'premium-performer': isTopPerformer(row) }"
+      ></tr>
+    </table>
+
+    <div class="no-data-msg" *ngIf="!loading && strategies.length === 0">
+      <mat-icon>history</mat-icon>
+      <p>No strategies found. Train and backtest a model to see it here.</p>
+    </div>
+  </div>
+</div>

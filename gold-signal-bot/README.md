@@ -1,6 +1,7 @@
-# 🤖 ML Gold Signal Bot
+# FundedLab
 
-A Python-based machine learning application that generates trading signals for **Gold (XAUUSD)** using technical analysis and Random Forest classification.
+AI-Powered Gold Trading System with Machine Learning.
+application that generates trading signals for **Gold (XAUUSD)** using technical analysis and Random Forest classification.
 
 ⚠️ **IMPORTANT: This bot generates signals only — NO AUTO-TRADING**
 
@@ -34,6 +35,7 @@ python train_model.py
 ```
 
 This will:
+
 - Fetch 2 years of Gold historical data
 - Compute technical indicators
 - Train a RandomForestClassifier
@@ -47,6 +49,7 @@ python signal_bot.py
 ```
 
 The bot will:
+
 - Load the trained model
 - Fetch latest Gold data every hour
 - Generate BUY/SELL/HOLD signals
@@ -84,12 +87,12 @@ gold-signal-bot/
 
 The bot computes the following features:
 
-| Indicator | Parameters | Description |
-|-----------|-----------|-------------|
-| **RSI** | Period: 14 | Relative Strength Index |
-| **MACD** | Fast: 12, Slow: 26, Signal: 9 | Moving Average Convergence Divergence |
-| **Bollinger Bands** | Period: 20, Std: 2 | Upper and Lower bands |
-| **Price Return** | — | Percentage change |
+| Indicator           | Parameters                    | Description                           |
+| ------------------- | ----------------------------- | ------------------------------------- |
+| **RSI**             | Period: 14                    | Relative Strength Index               |
+| **MACD**            | Fast: 12, Slow: 26, Signal: 9 | Moving Average Convergence Divergence |
+| **Bollinger Bands** | Period: 20, Std: 2            | Upper and Lower bands                 |
+| **Price Return**    | —                             | Percentage change                     |
 
 ---
 
@@ -97,19 +100,21 @@ The bot computes the following features:
 
 The bot generates signals based on **prediction changes**:
 
-| Condition | Signal | Action |
-|-----------|--------|--------|
-| Previous = 0 (Down) → Current = 1 (Up) | **BUY** | Enter long position |
+| Condition                              | Signal   | Action               |
+| -------------------------------------- | -------- | -------------------- |
+| Previous = 0 (Down) → Current = 1 (Up) | **BUY**  | Enter long position  |
 | Previous = 1 (Up) → Current = 0 (Down) | **SELL** | Enter short position |
-| No change | **HOLD** | No action |
+| No change                              | **HOLD** | No action            |
 
 ### Stop Loss & Take Profit
 
 **BUY Signal:**
+
 - SL = Entry Price × 0.99 (1% below)
 - TP = Entry Price × 1.02 (2% above)
 
 **SELL Signal:**
+
 - SL = Entry Price × 1.01 (1% above)
 - TP = Entry Price × 0.98 (2% below)
 
@@ -118,16 +123,19 @@ The bot generates signals based on **prediction changes**:
 ## 🖥️ Output Examples
 
 ### BUY Signal
+
 ```
 📈 BUY SIGNAL — Price: 1923.50 | SL: 1904.26 | TP: 1961.97
 ```
 
 ### SELL Signal
+
 ```
 📉 SELL SIGNAL — Price: 1923.50 | SL: 1942.73 | TP: 1885.03
 ```
 
 ### HOLD
+
 ```
 ⏳ HOLD — No new signal at this time.
 ```
@@ -162,12 +170,14 @@ TAKE_PROFIT_PERCENT = 0.02        # 2% TP
 ## 📈 Training Details
 
 ### Model
+
 - **Algorithm**: RandomForestClassifier
 - **Trees**: 100
 - **Max Depth**: 10
 - **Min Samples Split**: 5
 
 ### Data
+
 - **Source**: Yahoo Finance (`yfinance`)
 - **Period**: 2 years (default)
 - **Split**: 80% training, 20% testing
@@ -187,9 +197,9 @@ python train_model.py
 
 All signals are saved to `data/signals.csv`:
 
-| timestamp | type | price | sl | tp |
-|-----------|------|-------|----|----|
-| 2026-01-01 14:00:00 | BUY | 1923.50 | 1904.26 | 1961.97 |
+| timestamp           | type | price   | sl      | tp      |
+| ------------------- | ---- | ------- | ------- | ------- |
+| 2026-01-01 14:00:00 | BUY  | 1923.50 | 1904.26 | 1961.97 |
 | 2026-01-01 18:00:00 | SELL | 1935.20 | 1954.55 | 1896.49 |
 
 ---
@@ -235,6 +245,7 @@ Press `Ctrl+C` to stop the bot gracefully.
 ```
 
 **Solutions**:
+
 - Check internet connection
 - Verify ticker symbol is correct
 - Try a different interval
@@ -267,6 +278,7 @@ pip install pandas numpy scikit-learn yfinance joblib
 ## 🤝 Contributing
 
 Feel free to:
+
 - Report bugs
 - Suggest features
 - Submit improvements

@@ -1,0 +1,284 @@
+.parameters-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-card {
+  margin-bottom: 24px;
+  
+  mat-card-header {
+    margin-bottom: 16px;
+    
+    mat-icon[mat-card-avatar] {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: #3f51b5;
+    }
+  }
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+  
+  &.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  &.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (max-width: 768px) {
+    &.cols-2,
+    &.cols-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-top: 24px;
+  
+  button {
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+}
+
+.form-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  
+  mat-icon {
+    &.valid {
+      color: #4caf50;
+    }
+    
+    &.invalid {
+      color: #f44336;
+    }
+  }
+}
+
+/* Info Icon in Hint Styling */
+.info-icon {
+  font-size: 16px; 
+  height: 16px; 
+  width: 16px; 
+  cursor: help; 
+  color: var(--text-secondary);
+  float: right; /* Position to the right as requested */
+  
+  &:hover {
+    color: var(--text-accent);
+  }
+}
+
+/* Ensure MatFormField Hint displays nicely with the floating icon */
+::ng-deep .mat-mdc-form-field-hint-wrapper {
+  display: flex !important;
+  align-items: center;
+  padding-top: 8px; /* Added spacing */
+  padding-bottom: 16px;
+}
+
+::ng-deep .mat-mdc-form-field-hint {
+  width: 100%;
+}
+
+/* Toggle Styling */
+.white-text-toggle {
+  /* Force label text to be white */
+  ::ng-deep .mdc-label {
+    color: white !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Fix invisible toggle track/thumb on dark background */
+  ::ng-deep .mdc-switch__track::after, 
+  ::ng-deep .mdc-switch__track::before {
+    background-color: rgba(255, 255, 255, 0.4) !important; /* Visible grey for unchecked track */
+  }
+  
+  ::ng-deep .mdc-switch__handle::after, 
+  ::ng-deep .mdc-switch__handle::before {
+     background-color: #e0e0e0 !important; /* Visible thumb */
+  }
+  
+  /* Primary color for checked state */
+  ::ng-deep .mdc-switch:enabled .mdc-switch__track::after {
+     background: var(--primary-gradient) !important;
+  }
+  
+  ::ng-deep .mdc-switch:enabled .mdc-switch__handle::after {
+     background: var(--text-accent) !important;
+  }
+}
+
+.info-icon-inline {
+  font-size: 16px; 
+  height: 16px; 
+  width: 16px; 
+  cursor: help; 
+  color: var(--text-secondary);
+  vertical-align: middle;
+  
+  &:hover {
+    color: var(--text-accent);
+  }
+}
+/* Subsection titles for grouped fields */
+.subsection-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 16px 0 12px;
+  color: #3f51b5;
+  border-left: 4px solid #3f51b5;
+  padding-left: 12px;
+}
+
+/* Advanced Section Styling (Premium & Disabled) */
+.advanced-section {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  
+  &.disabled-look {
+    background: rgba(245, 245, 245, 0.05);
+    
+    ::ng-deep {
+      .mat-mdc-form-field {
+        opacity: 0.7;
+        pointer-events: none;
+        
+        .mat-mdc-text-field-wrapper {
+          background-color: rgba(0, 0, 0, 0.05) !important;
+        }
+      }
+    }
+  }
+}
+
+.premium-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 16px;
+  
+  .premium-badge {
+    color: #ffd700;
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+    animation: pulse-gold 2s infinite ease-in-out;
+  }
+}
+
+@keyframes pulse-gold {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+.premium-icon {
+  color: #ffd700 !important;
+}
+
+.premium-text {
+  color: #ffd700 !important;
+  font-weight: 600;
+}
+
+/* Active Section highlight */
+.active-section {
+  border-left: 4px solid #3f51b5;
+}
+
+/* Slider and Group fixes */
+.slider-group {
+  margin-bottom: 16px;
+  
+  .label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    
+    label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.87);
+    }
+  }
+  
+  mat-slider {
+    width: 100%;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.model-description-box {
+  background: rgba(63, 81, 181, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 8px;
+  border-left: 4px solid #3f51b5;
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.87);
+  }
+
+  .info-icon-inline {
+    color: #3f51b5;
+    flex-shrink: 0;
+  }
+}
+
+.top-bar {
+  margin-bottom: 24px;
+}
+
+/* Status Bar adjustments */
+.actions-bar {
+  background: rgba(255, 255, 255, 0.05); /* Match dark theme if needed */
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}

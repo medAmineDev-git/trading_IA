@@ -1,0 +1,159 @@
+.strategies-container {
+  padding: 24px;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 500;
+  }
+}
+
+.strategy-table {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+  th.mat-mdc-header-cell {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffd700;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+  }
+
+  tr.mat-mdc-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.model-badge {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.xgboost {
+    background: rgba(63, 81, 181, 0.2);
+    color: #3f51b5;
+    border: 1px solid #3f51b5;
+  }
+
+  &.lightgbm {
+    background: rgba(0, 150, 136, 0.2);
+    color: #009688;
+    border: 1px solid #009688;
+  }
+
+  &.rf {
+    background: rgba(156, 39, 176, 0.2);
+    color: #9c27b0;
+    border: 1px solid #9c27b0;
+  }
+}
+
+.metric-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  font-family: "Roboto Mono", monospace;
+  font-weight: 500;
+
+  &.positive {
+    color: #4caf50;
+  }
+
+  &.negative {
+    color: #f44336;
+  }
+}
+
+.premium-performer {
+  background: linear-gradient(
+    to right,
+    rgba(255, 215, 0, 0.08),
+    transparent
+  ) !important;
+  
+  td.mat-mdc-cell:first-child {
+    border-left: 4px solid #ffd700;
+  }
+}
+
+.loading-shade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 56px;
+  right: 0;
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-data-msg {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--text-secondary);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  p {
+    font-size: 1.1rem;
+  }
+}
+
+.live-status-label {
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 4px;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+
+  &.active {
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+  }
+}
+
+.telegram-btn {
+  border-color: #0088cc !important;
+  color: #0088cc !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 136, 204, 0.1) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 136, 204, 0.2);
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+  }
+}
+

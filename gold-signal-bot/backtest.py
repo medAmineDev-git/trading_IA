@@ -4,7 +4,6 @@ Backtest Module - Test strategy on historical data and calculate pip results
 
 import pandas as pd
 import numpy as np
-import yfinance as yf
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
@@ -12,6 +11,8 @@ warnings.filterwarnings('ignore')
 import config
 from utils.indicators import add_all_indicators, prepare_features
 from utils.model_loader import load_model
+from utils.av_fetch import fetch_fx_history
+from utils.mt5_fetch import load_csv_data
 import os
 
 
@@ -34,34 +35,48 @@ class GoldBacktester:
         self.trades = []
         self.ticker = config.TICKER
         self.interval = config.INTERVAL
+        self.used_ticker = self.ticker
+        self.used_interval = self.interval
         
         if self.model is None:
             raise Exception("Model not found. Please run train_model.py first.")
     
     def fetch_data(self):
         """Fetch historical data for backtest period"""
-        print(f"\n📊 Fetching {self.days} days of historical data...")
-        print(f"   Ticker: {self.ticker}")
-        print(f"   Interval: {self.interval}")
+        data_source = getattr(config, "DATA_SOURCE", "").lower()
         
-        try:
-            data = yf.download(
-                self.ticker,
-                period=f"{self.days}d",
-                interval=self.interval,
-                progress=False
-            )
+        # MT5 CSV mode
+        if data_source == "mt5_csv":
+            csv_path = getattr(config, "MT5_CSV_PATH", "data/mt5_history.csv")
+            symbol = getattr(config, "MT5_SYMBOL", "XAUUSD")
+            timeframe = getattr(config, "MT5_TIMEFRAME", "H4")
             
-            if data.empty:
-                print(f"❌ No data retrieved for {self.ticker}")
-                return None
+            print(f"\n📊 Loading {self.days} days from MT5 CSV for backtest...")
+            print(f"   Symbol: {symbol}, Timeframe: {timeframe}")
             
-            print(f"✅ Downloaded {len(data)} candles")
-            return data
-        
-        except Exception as e:
-            print(f"❌ Error fetching data: {e}")
+            data = load_csv_data(csv_path, days=self.days)
+            if data is not None and not data.empty:
+                self.used_ticker = symbol
+                self.used_interval = timeframe
+                print(f"✅ Loaded {len(data)} candles")
+                return data
+            print("❌ Failed to load MT5 CSV. Run 'python export_mt5_data.py' first.")
             return None
+        
+        # Alpha Vantage mode
+        if data_source == "alphavantage":
+            print(f"\n📊 Fetching {self.days} days of historical data from Alpha Vantage...")
+            data = fetch_fx_history(self.days)
+            if not data.empty:
+                self.used_ticker = config.TICKER
+                self.used_interval = "1d"
+                print(f"✅ Downloaded {len(data)} candles (ticker={self.used_ticker}, interval={self.used_interval})")
+                return data
+            print("❌ No data retrieved from Alpha Vantage. Aborting (spot-only setup).")
+            return None
+
+        print(f"❌ Unsupported DATA_SOURCE: {data_source}. Use 'mt5_csv' or 'alphavantage'.")
+        return None
     
     def run_backtest(self):
         """Run backtest on historical data"""
@@ -70,6 +85,10 @@ class GoldBacktester:
             return
         
         print(f"\n🔄 Running backtest on {self.days} days of data...")
+
+        # Debug: show columns to diagnose missing OHLCV fields
+        print(f"   Data columns: {list(data.columns)}")
+        print(f"   Using ticker={self.used_ticker}, interval={self.used_interval}")
         
         # Add indicators
         data_with_indicators = add_all_indicators(data)
@@ -102,6 +121,7 @@ class GoldBacktester:
         
         for idx in range(len(results_df)):
             timestamp = results_df.index[idx]
+            self._current_timestamp = timestamp  # Store for exit tracking
             current_price = float(results_df['Close'].iloc[idx])
             curr_pred = int(results_df['Prediction'].iloc[idx])
             prev_pred = results_df['Prev_Prediction'].iloc[idx]
@@ -118,8 +138,16 @@ class GoldBacktester:
             macd_val = float(latest_row['MACD'])
             macd_sig = float(latest_row['MACD_Signal'])
             rsi_val = float(latest_row['RSI'])
-            macd_ok_buy = bool((macd_val > macd_sig) and (rsi_val > config.RSI_BUY_MIN))
-            macd_ok_sell = bool((macd_val < macd_sig) and (rsi_val < config.RSI_SELL_MAX))
+            atr_val = float(latest_row['ATR'])
+            ema_slow = float(latest_row['EMA_Slow'])
+            
+            # Trend filter: only trade with EMA200 trend
+            use_trend_filter = getattr(config, 'USE_TREND_FILTER', False)
+            trend_ok_buy = (current_price > ema_slow) if use_trend_filter else True
+            trend_ok_sell = (current_price < ema_slow) if use_trend_filter else True
+            
+            macd_ok_buy = bool((macd_val > macd_sig) and (rsi_val > config.RSI_BUY_MIN) and trend_ok_buy)
+            macd_ok_sell = bool((macd_val < macd_sig) and (rsi_val < config.RSI_SELL_MAX) and trend_ok_sell)
             
             # Confidence gate
             if confidence < float(config.PROB_THRESHOLD):
@@ -129,8 +157,16 @@ class GoldBacktester:
             
             # BUY signal: previous = 0, current = 1
             if (prev_pred == 0) and (curr_pred == 1) and macd_ok_buy:
-                sl = round(current_price * (1 - config.STOP_LOSS_PERCENT), 2)
-                tp = round(current_price * (1 + config.TAKE_PROFIT_PERCENT), 2)
+                # Use ATR-based stops if enabled
+                use_atr = getattr(config, 'USE_ATR_STOPS', False)
+                if use_atr and atr_val > 0:
+                    atr_stop_mult = getattr(config, 'ATR_STOP_MULTIPLIER', 2.0)
+                    atr_tp_mult = getattr(config, 'ATR_TP_MULTIPLIER', 10)
+                    sl = round(current_price - (atr_val * atr_stop_mult), 2)
+                    tp = round(current_price + (atr_val * atr_tp_mult), 2)
+                else:
+                    sl = round(current_price * (1 - config.STOP_LOSS_PERCENT), 2)
+                    tp = round(current_price * (1 + config.TAKE_PROFIT_PERCENT), 2)
                 
                 self.trades.append({
                     'timestamp': timestamp,
@@ -139,6 +175,7 @@ class GoldBacktester:
                     'sl': sl,
                     'tp': tp,
                     'close_price': None,
+                    'close_timestamp': None,
                     'close_reason': None,
                     'pips': None,
                     'status': 'Open',
@@ -148,8 +185,16 @@ class GoldBacktester:
             
             # SELL signal: previous = 1, current = 0
             elif (prev_pred == 1) and (curr_pred == 0) and macd_ok_sell:
-                sl = round(current_price * (1 + config.STOP_LOSS_PERCENT), 2)
-                tp = round(current_price * (1 - config.TAKE_PROFIT_PERCENT), 2)
+                # Use ATR-based stops if enabled
+                use_atr = getattr(config, 'USE_ATR_STOPS', False)
+                if use_atr and atr_val > 0:
+                    atr_stop_mult = getattr(config, 'ATR_STOP_MULTIPLIER', 2.0)
+                    atr_tp_mult = getattr(config, 'ATR_TP_MULTIPLIER', 5.0)
+                    sl = round(current_price + (atr_val * atr_stop_mult), 2)
+                    tp = round(current_price - (atr_val * atr_tp_mult), 2)
+                else:
+                    sl = round(current_price * (1 + config.STOP_LOSS_PERCENT), 2)
+                    tp = round(current_price * (1 - config.TAKE_PROFIT_PERCENT), 2)
                 
                 self.trades.append({
                     'timestamp': timestamp,
@@ -158,6 +203,7 @@ class GoldBacktester:
                     'sl': sl,
                     'tp': tp,
                     'close_price': None,
+                    'close_timestamp': None,
                     'close_reason': None,
                     'pips': None,
                     'status': 'Open',
@@ -175,12 +221,18 @@ class GoldBacktester:
     
     def _check_trade_exits(self, current_price, idx):
         """Check if open trades hit SL or TP"""
+        # Get current timestamp from results_df if available
+        current_timestamp = None
+        if hasattr(self, '_current_timestamp'):
+            current_timestamp = self._current_timestamp
+        
         for trade in self.trades:
             if trade['status'] == 'Open':
                 if trade['type'] == 'BUY':
                     # Check SL
                     if current_price <= trade['sl']:
                         trade['close_price'] = trade['sl']
+                        trade['close_timestamp'] = current_timestamp
                         trade['close_reason'] = 'SL_HIT'
                         # For Gold: pips = price_diff * 10 (each 0.1 = 1 pip)
                         trade['pips'] = (trade['sl'] - trade['entry_price']) * 10
@@ -188,6 +240,7 @@ class GoldBacktester:
                     # Check TP
                     elif current_price >= trade['tp']:
                         trade['close_price'] = trade['tp']
+                        trade['close_timestamp'] = current_timestamp
                         trade['close_reason'] = 'TP_HIT'
                         trade['pips'] = (trade['tp'] - trade['entry_price']) * 10
                         trade['status'] = 'Closed'
@@ -196,12 +249,14 @@ class GoldBacktester:
                     # Check SL
                     if current_price >= trade['sl']:
                         trade['close_price'] = trade['sl']
+                        trade['close_timestamp'] = current_timestamp
                         trade['close_reason'] = 'SL_HIT'
                         trade['pips'] = (trade['entry_price'] - trade['sl']) * 10
                         trade['status'] = 'Closed'
                     # Check TP
                     elif current_price <= trade['tp']:
                         trade['close_price'] = trade['tp']
+                        trade['close_timestamp'] = current_timestamp
                         trade['close_reason'] = 'TP_HIT'
                         trade['pips'] = (trade['entry_price'] - trade['tp']) * 10
                         trade['status'] = 'Closed'
@@ -277,13 +332,20 @@ class GoldBacktester:
         
         # Detailed closed trades
         if closed_trades:
+            tz_offset = pd.Timedelta(hours=getattr(config, 'TIMEZONE_OFFSET_HOURS', 0))
             lines.append("\n📋 CLOSED TRADE DETAILS:")
             lines.append("-"*70)
             for i, trade in enumerate(closed_trades, 1):
                 pips_emoji = "✅" if trade['pips'] > 0 else "❌"
                 lines.append(f"\nTrade #{i} | {trade['type']:4s} | Pips: {trade['pips']:7.2f} {pips_emoji}")
-                lines.append(f"  Entry: {trade['entry_price']:.2f} @ {trade['timestamp']}")
-                lines.append(f"  Exit:  {trade['close_price']:.2f} ({trade['close_reason']})")
+                entry_time = trade['timestamp'] + tz_offset
+                lines.append(f"  Entry: {trade['entry_price']:.2f} @ {entry_time}")
+                exit_time = trade.get('close_timestamp', None)
+                if exit_time:
+                    exit_time = exit_time + tz_offset
+                else:
+                    exit_time = 'N/A'
+                lines.append(f"  Exit:  {trade['close_price']:.2f} @ {exit_time} ({trade['close_reason']})")
                 lines.append(f"  SL: {trade['sl']:.2f} | TP: {trade['tp']:.2f}")
         
         lines.append("\n" + "="*70)

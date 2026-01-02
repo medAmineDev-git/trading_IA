@@ -1,0 +1,230 @@
+<div class="results-container" *ngIf="results; else noResults">
+  <!-- Overview Metrics -->
+  <div class="metrics-grid">
+    <mat-card class="metric-card">
+      <div
+        class="metric-value"
+        [class.positive]="results.metrics.total_pips > 0"
+        [class.negative]="results.metrics.total_pips < 0"
+      >
+        {{ results.metrics.total_pips }}
+      </div>
+      <div class="metric-label">Total Pips</div>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <div class="metric-value neutral">{{ results.metrics.win_rate }}%</div>
+      <div class="metric-label">Win Rate</div>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <div class="metric-value neutral">{{ results.metrics.total_trades }}</div>
+      <div class="metric-label">Total Trades</div>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <div class="metric-value neutral">
+        {{ results.metrics.profit_factor }}
+      </div>
+      <div class="metric-label">Profit Factor</div>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <div class="metric-value positive">{{ results.metrics.avg_win }}</div>
+      <div class="metric-label">Avg Win (Pips)</div>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <div class="metric-value negative">{{ results.metrics.avg_loss }}</div>
+      <div class="metric-label">Avg Loss (Pips)</div>
+    </mat-card>
+  </div>
+
+  <!-- Tabs for detailed views -->
+  <mat-tab-group>
+    <!-- Charts Tab -->
+    <mat-tab label="Charts">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Equity Curve</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="chart-container">
+              <canvas
+                baseChart
+                [data]="equityChartData"
+                [options]="equityChartOptions"
+                type="line"
+              >
+              </canvas>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Trades Tab -->
+    <mat-tab label="All Trades">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Trade History</mat-card-title>
+            <button mat-raised-button color="primary" (click)="exportToCSV()">
+              <mat-icon>download</mat-icon>
+              Export CSV
+            </button>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="table-container">
+              <table
+                mat-table
+                [dataSource]="results.trades"
+                class="trades-table"
+              >
+                <ng-container matColumnDef="timestamp">
+                  <th mat-header-cell *matHeaderCellDef>Timestamp</th>
+                  <td mat-cell *matCellDef="let trade">
+                    {{ trade.timestamp | date : "short" }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="type">
+                  <th mat-header-cell *matHeaderCellDef>Type</th>
+                  <td mat-cell *matCellDef="let trade">
+                    <span
+                      class="trade-type"
+                      [class.buy]="trade.type === 'BUY'"
+                      [class.sell]="trade.type === 'SELL'"
+                    >
+                      {{ trade.type }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="entry_price">
+                  <th mat-header-cell *matHeaderCellDef>Entry</th>
+                  <td mat-cell *matCellDef="let trade">
+                    {{ trade.entry_price | number : "1.2-2" }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="sl">
+                  <th mat-header-cell *matHeaderCellDef>SL</th>
+                  <td mat-cell *matCellDef="let trade">
+                    {{ trade.sl | number : "1.2-2" }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="tp">
+                  <th mat-header-cell *matHeaderCellDef>TP</th>
+                  <td mat-cell *matCellDef="let trade">
+                    {{ trade.tp | number : "1.2-2" }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="close_price">
+                  <th mat-header-cell *matHeaderCellDef>Close</th>
+                  <td mat-cell *matCellDef="let trade">
+                    {{
+                      trade.close_price
+                        ? (trade.close_price | number : "1.2-2")
+                        : "-"
+                    }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="pips">
+                  <th mat-header-cell *matHeaderCellDef>Pips</th>
+                  <td mat-cell *matCellDef="let trade">
+                    <span [ngClass]="getTradeClass(trade)">
+                      {{
+                        trade.pips !== null
+                          ? (trade.pips | number : "1.2-2")
+                          : "-"
+                      }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="confidence">
+                  <th mat-header-cell *matHeaderCellDef>Confidence</th>
+                  <td mat-cell *matCellDef="let trade">
+                    {{ trade.confidence * 100 | number : "1.0-0" }}%
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr
+                  mat-row
+                  *matRowDef="let row; columns: displayedColumns"
+                ></tr>
+              </table>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Statistics Tab -->
+    <mat-tab label="Statistics">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Detailed Statistics</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <strong>Total Trades:</strong>
+                <span>{{ results.metrics.total_trades }}</span>
+              </div>
+              <div class="stat-item">
+                <strong>Closed Trades:</strong>
+                <span>{{ results.metrics.closed_trades }}</span>
+              </div>
+              <div class="stat-item">
+                <strong>Winning Trades:</strong>
+                <span class="positive">{{
+                  results.metrics.winning_trades
+                }}</span>
+              </div>
+              <div class="stat-item">
+                <strong>Losing Trades:</strong>
+                <span class="negative">{{
+                  results.metrics.losing_trades
+                }}</span>
+              </div>
+              <div class="stat-item">
+                <strong>Win Rate:</strong>
+                <span>{{ results.metrics.win_rate }}%</span>
+              </div>
+              <div class="stat-item">
+                <strong>Profit Factor:</strong>
+                <span>{{ results.metrics.profit_factor }}</span>
+              </div>
+              <div class="stat-item">
+                <strong>Average Win:</strong>
+                <span class="positive">{{ results.metrics.avg_win }} pips</span>
+              </div>
+              <div class="stat-item">
+                <strong>Average Loss:</strong>
+                <span class="negative"
+                  >{{ results.metrics.avg_loss }} pips</span
+                >
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>
+
+<ng-template #noResults>
+  <div class="no-results">
+    <mat-icon>info</mat-icon>
+    <h2>No Results Available</h2>
+    <p>Run a backtest to see results here.</p>
+  </div>
+</ng-template>

@@ -3,7 +3,6 @@ Train Model Script
 Trains a RandomForestClassifier on Gold (XAUUSD) historical data
 """
 
-import yfinance as yf
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -15,65 +14,107 @@ warnings.filterwarnings('ignore')
 # Import custom utilities
 from utils.indicators import add_all_indicators, prepare_features
 from utils.model_loader import save_model, save_training_metadata
+from utils.av_fetch import fetch_fx_history, period_to_days
+from utils.mt5_fetch import load_csv_data
 import config
 
 
 def fetch_training_data(ticker, period, interval):
     """
-    Fetch historical Gold data for training
-    
-    Args:
-        ticker: Yahoo Finance ticker (default 'XAUUSD=X')
-        period: Data period (default '2y' for 2 years)
-        interval: Data interval (default '1h')
-    
-    Returns:
-        pandas DataFrame with OHLCV data
+    Fetch historical Gold data for training.
+    Returns tuple: (df, effective_period, used_ticker, used_interval)
     """
-    print(f"📊 Fetching historical data for {ticker}...")
-    print(f"   Period: {period}, Interval: {interval}")
+    data_source = getattr(config, "DATA_SOURCE", "").lower()
     
-    gold = yf.Ticker(ticker)
-    df = gold.history(period=period, interval=interval)
+    # MT5 CSV mode
+    if data_source == "mt5_csv":
+        csv_path = getattr(config, "MT5_CSV_PATH", "data/mt5_history.csv")
+        symbol = getattr(config, "MT5_SYMBOL", "XAUUSD")
+        timeframe = getattr(config, "MT5_TIMEFRAME", "H4")
+        
+        print(f"📊 Loading historical data from MT5 CSV...")
+        print(f"   Symbol: {symbol}, Timeframe: {timeframe}")
+        print(f"   CSV Path: {csv_path}")
+        
+        df = load_csv_data(csv_path)
+        if df is not None and not df.empty:
+            effective_period = f"{len(df)} bars"
+            print(f"✅ Loaded {len(df)} candles")
+            return df, effective_period, symbol, timeframe
+        print("❌ Failed to load MT5 CSV. Run 'python export_mt5_data.py' first.")
+        return None, "0d", symbol, timeframe
     
-    if df.empty:
-        print("❌ No data retrieved. Check ticker symbol and parameters.")
-        return None
-    
-    print(f"✅ Retrieved {len(df)} candles")
-    return df
+    # Alpha Vantage mode
+    if data_source == "alphavantage":
+        days = period_to_days(period)
+        effective_period = f"{days}d" if days else str(period)
+        print(f"📊 Fetching historical data for {ticker} from Alpha Vantage...")
+        print(f"   Period: {effective_period}, Interval: 1d")
+        df = fetch_fx_history(days)
+        if not df.empty:
+            print(f"✅ Retrieved {len(df)} candles (ticker={ticker}, interval=1d)")
+            return df, effective_period, ticker, "1d"
+        print("❌ No data retrieved from Alpha Vantage. Aborting.")
+        return None, effective_period, ticker, "1d"
+
+    # Unsupported data source
+    print(f"❌ Unsupported DATA_SOURCE: {data_source}. Use 'mt5_csv' or 'alphavantage'.")
+    return None, period, ticker, interval
 
 
-def train_model(X_train, y_train, *, n_estimators, random_state, max_depth, min_samples_split):
+def train_model(X_train, y_train, *, model_type, n_estimators, random_state, max_depth, min_samples_split):
     """
-    Train RandomForestClassifier
+    Train specified model type
     
     Args:
         X_train: Training features
         y_train: Training labels
-        n_estimators: Number of trees (default 100)
-        random_state: Random state for reproducibility
+        model_type: 'rf', 'xgboost', or 'lightgbm'
+        n_estimators: Number of trees
+        random_state: Random state
+        max_depth: Maximum depth
+        min_samples_split: Minimum samples to split
     
     Returns:
         Trained model
     """
-    print(f"\n🤖 Training RandomForestClassifier...")
+    print(f"\n🤖 Training {model_type.upper()} model...")
     print(f"   Training samples: {len(X_train)}")
     print(f"   Features: {X_train.shape[1]}")
-    print(f"   Number of trees: {n_estimators}")
     
-    model = RandomForestClassifier(
-        n_estimators=n_estimators,
-        random_state=random_state,
-        n_jobs=-1,
-        max_depth=max_depth,
-        min_samples_split=min_samples_split,
-        class_weight='balanced_subsample'
-    )
+    if model_type == 'xgboost':
+        from xgboost import XGBClassifier
+        model = XGBClassifier(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            learning_rate=0.05,
+            random_state=random_state,
+            n_jobs=-1,
+            verbosity=0
+        )
+    elif model_type == 'lightgbm':
+        from lightgbm import LGBMClassifier
+        model = LGBMClassifier(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            learning_rate=0.05,
+            random_state=random_state,
+            n_jobs=-1,
+            importance_type='gain'
+        )
+    else: # Default to RandomForest
+        model = RandomForestClassifier(
+            n_estimators=n_estimators,
+            random_state=random_state,
+            n_jobs=-1,
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            class_weight='balanced_subsample'
+        )
     
     model.fit(X_train, y_train)
     
-    print("✅ Model training complete!")
+    print(f"✅ {model_type.upper()} Model training complete!")
     return model
 
 
@@ -104,10 +145,17 @@ def evaluate_model(model, X_test, y_test):
     print(confusion_matrix(y_test, y_pred))
     print(f"{'='*50}\n")
     
+    # Safe access to number of estimators (trees)
+    num_estimators = 0
+    if hasattr(model, 'estimators_'):
+        num_estimators = len(model.estimators_)
+    elif hasattr(model, 'n_estimators'):
+        num_estimators = model.n_estimators
+    
     return {
         'accuracy': accuracy,
         'test_samples': len(y_test),
-        'train_samples': len(model.estimators_)
+        'train_samples': num_estimators
     }
 
 
@@ -119,7 +167,7 @@ def main():
     print("=" * 60)
     
     # Step 1: Fetch data
-    df = fetch_training_data(ticker=config.TICKER, period=config.TRAINING_PERIOD, interval=config.INTERVAL)
+    df, effective_period, used_ticker, used_interval = fetch_training_data(ticker=config.TICKER, period=config.TRAINING_PERIOD, interval=config.INTERVAL)
     if df is None:
         return
     
@@ -148,6 +196,7 @@ def main():
     model = train_model(
         X_train,
         y_train,
+        model_type=config.MODEL_TYPE,
         n_estimators=config.N_ESTIMATORS,
         random_state=config.RANDOM_STATE,
         max_depth=config.MAX_DEPTH,
@@ -167,9 +216,10 @@ def main():
         'Training Samples': metrics['test_samples'],
         'Test Samples': len(X_test),
         'Features': X.shape[1],
-        'Ticker': config.TICKER,
-        'Interval': config.INTERVAL,
-        'Period': config.TRAINING_PERIOD,
+        'Ticker': used_ticker,
+        'Interval': used_interval,
+        'Period': effective_period,
+        'Model Type': config.MODEL_TYPE,
         'N_Estimators': config.N_ESTIMATORS,
         'Max_Depth': config.MAX_DEPTH,
         'Min_Samples_Split': config.MIN_SAMPLES_SPLIT,

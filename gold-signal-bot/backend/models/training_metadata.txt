@@ -1,0 +1,13 @@
+Training Date: 2026-01-02 18:37:51
+Accuracy: 0.4945
+Training Samples: 19997
+Test Samples: 19997
+Features: 12
+Ticker: XAUUSD
+Interval: D1
+Period: 100000 bars
+Model Type: lightgbm
+N_Estimators: 300
+Max_Depth: 6
+Min_Samples_Split: 5
+Prob_Threshold: 0.5
