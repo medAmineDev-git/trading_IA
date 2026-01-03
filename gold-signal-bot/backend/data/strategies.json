@@ -976,5 +976,70 @@
             },
             "timestamp": "2026-01-02T21:19:17.632756"
         }
+    },
+    {
+        "id": "3a369e9e-7109-4b96-9499-2503b0395069",
+        "name": "Strategy 2026-01-03 13:49",
+        "training": {
+            "params": {
+                "indicators": {
+                    "rsi_period": 14,
+                    "macd_fast": 12,
+                    "macd_slow": 26,
+                    "macd_signal": 9,
+                    "bb_period": 20,
+                    "bb_std_dev": 2,
+                    "atr_period": 14,
+                    "ema_fast": 50,
+                    "ema_slow": 200
+                },
+                "risk": {
+                    "stop_loss_percent": 0.005,
+                    "take_profit_percent": 0.01,
+                    "prob_threshold": 0.5,
+                    "use_atr_stops": false,
+                    "use_trend_filter": false
+                },
+                "model": {
+                    "model_type": "lightgbm",
+                    "n_estimators": 300,
+                    "max_depth": 6,
+                    "min_samples_split": 5
+                },
+                "data": {
+                    "csv_path": "C:\\Users\\a.aouidane\\projects\\IA-projects\\gold-signal-bot\\data\\XAUUSD_h1.csv",
+                    "training_period": "1y"
+                }
+            },
+            "metadata": {
+                "Training Date": "2026-01-02 12:36:21",
+                "Accuracy": "0.4721",
+                "Training Samples": "1038",
+                "Test Samples": "1038",
+                "Features": "12",
+                "Ticker": "XAUUSD",
+                "Interval": "D1",
+                "Period": "5207 bars",
+                "N_Estimators": "300",
+                "Max_Depth": "6",
+                "Min_Samples_Split": "5",
+                "Prob_Threshold": "0.5"
+            },
+            "timestamp": "2026-01-03T13:49:24.366868"
+        },
+        "backtest": {
+            "metrics": {
+                "total_pips": 4245.81,
+                "total_trades": 185,
+                "closed_trades": 183,
+                "winning_trades": 69,
+                "losing_trades": 114,
+                "win_rate": 37.7,
+                "avg_win": 339.01,
+                "avg_loss": -167.95,
+                "profit_factor": 2.02
+            },
+            "timestamp": "2026-01-03T13:49:31.966220"
+        }
     }
 ]
