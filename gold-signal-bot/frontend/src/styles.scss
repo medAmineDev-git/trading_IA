@@ -270,32 +270,3 @@ button.btn-glass {
 .mb-16 { margin-bottom: 16px; }
 .text-center { text-align: center; }
 .full-width { width: 100%; }
-
-/* Navbar placeholder style */
-nav.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: var(--border-subtle);
-  padding: 16px 0;
-  
-  .nav-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .logo {
-    font-family: var(--font-heading);
-    font-weight: 700;
-    font-size: 1.5rem;
-    color: var(--text-primary);
-    
-    span {
-      @extend .text-gradient;
-    }
-  }
-}

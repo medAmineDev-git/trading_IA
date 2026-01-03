@@ -1,8 +1,9 @@
-import { Component, Output, EventEmitter } from "@angular/core";
+import { Component, Output, EventEmitter, Input } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import {
   FormBuilder,
   FormGroup,
+  FormControl,
   ReactiveFormsModule,
   Validators,
 } from "@angular/forms";
@@ -14,7 +15,13 @@ import { MatProgressBarModule } from "@angular/material/progress-bar";
 import { MatIconModule } from "@angular/material/icon";
 import { MatSnackBar, MatSnackBarModule } from "@angular/material/snack-bar";
 import { ApiService } from "../../core/services/api.service";
-import { BacktestResults, JobStatus } from "../../core/models/models";
+import { AuthService } from "../../core/services/auth.service";
+import {
+  BacktestResults,
+  JobStatus,
+  TrainingParams,
+  Strategy,
+} from "../../core/models/models";
 
 @Component({
   selector: "app-backtest-panel",
@@ -46,6 +53,11 @@ import { BacktestResults, JobStatus } from "../../core/models/models";
                 <mat-label>Period (Days)</mat-label>
                 <input matInput type="number" formControlName="period_days" />
                 <mat-hint>Number of days to backtest</mat-hint>
+                <mat-error
+                  *ngIf="backtestForm.get('period_days')?.hasError('min')"
+                >
+                  Must be at least 1 day
+                </mat-error>
               </mat-form-field>
 
               <mat-form-field>
@@ -108,7 +120,7 @@ import { BacktestResults, JobStatus } from "../../core/models/models";
         </mat-card-content>
       </mat-card>
 
-      <!-- Quick Results -->
+      <!-- Quick Results & Save -->
       <mat-card class="quick-results-card" *ngIf="results">
         <mat-card-header>
           <mat-icon mat-card-avatar class="success-icon">check_circle</mat-icon>
@@ -117,6 +129,34 @@ import { BacktestResults, JobStatus } from "../../core/models/models";
         <mat-card-content>
           <div class="completion-message">
             <p>Results are displayed below.</p>
+          </div>
+
+          <!-- Save Strategy Form -->
+          <div class="save-strategy-section glass-panel">
+            <h3>Save Strategy</h3>
+            <div class="save-form">
+              <mat-form-field appearance="outline" class="name-input">
+                <mat-label>Strategy Name</mat-label>
+                <input
+                  matInput
+                  [formControl]="strategyNameControl"
+                  placeholder="e.g. Aggressive Scalper v1"
+                />
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="accent"
+                (click)="saveStrategy()"
+                [disabled]="isSaving || strategyNameControl.invalid"
+              >
+                <mat-icon>save</mat-icon>
+                {{ isSaving ? "Saving..." : "Save Strategy" }}
+              </button>
+            </div>
+            <p class="save-hint" *ngIf="!isAuthenticated">
+              <mat-icon inline>info</mat-icon> You must be logged in to save
+              strategies.
+            </p>
           </div>
         </mat-card-content>
       </mat-card>
@@ -199,26 +239,77 @@ import { BacktestResults, JobStatus } from "../../core/models/models";
         color: var(--text-secondary);
         font-size: 1.1rem;
       }
+
+      .save-strategy-section {
+        margin-top: 24px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .save-strategy-section h3 {
+        margin-top: 0;
+        margin-bottom: 16px;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+      }
+
+      .save-form {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+      }
+
+      .name-input {
+        flex: 1;
+      }
+
+      .save-hint {
+        margin-top: 8px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
     `,
   ],
 })
 export class BacktestPanelComponent {
+  @Input() params: TrainingParams | null = null;
   @Output() backtestComplete = new EventEmitter<BacktestResults>();
+  @Output() strategySaved = new EventEmitter<Strategy>();
 
   backtestForm: FormGroup;
+  strategyNameControl: FormControl;
   isRunning = false;
+  isSaving = false;
   backtestProgress = 0;
   backtestStatus = "";
   results: BacktestResults | null = null;
+  isAuthenticated = false;
 
   constructor(
     private fb: FormBuilder,
     private apiService: ApiService,
+    private authService: AuthService,
     private snackBar: MatSnackBar
   ) {
     this.backtestForm = this.fb.group({
       period_days: [350, [Validators.required, Validators.min(1)]],
       initial_capital: [10000],
+    });
+
+    this.strategyNameControl = new FormControl("", [Validators.required]);
+
+    this.authService.user$.subscribe((user) => {
+      this.isAuthenticated = !!user;
+      if (!this.isAuthenticated) {
+        this.strategyNameControl.disable();
+      } else {
+        this.strategyNameControl.enable();
+      }
     });
   }
 
@@ -230,14 +321,44 @@ export class BacktestPanelComponent {
     this.backtestStatus = "Starting backtest...";
     this.results = null;
 
-    const params = this.backtestForm.value;
+    // Merge period_days with general training/model params
+    const backtestParams = {
+      ...this.params,
+      ...this.backtestForm.getRawValue(),
+    };
 
-    this.apiService.startBacktest(params).subscribe({
+    this.apiService.startBacktest(backtestParams).subscribe({
       next: (response) => {
         this.pollBacktestStatus(response.job_id);
       },
       error: (error) => {
         this.handleError(error);
+      },
+    });
+  }
+
+  saveStrategy() {
+    if (this.strategyNameControl.invalid || !this.isAuthenticated) return;
+
+    const name = this.strategyNameControl.value;
+    this.isSaving = true;
+
+    this.apiService.savePersonalStrategy(name).subscribe({
+      next: (response) => {
+        this.isSaving = false;
+        this.snackBar.open("Strategy saved successfully!", "Close", {
+          duration: 3000,
+          panelClass: ["success-snackbar"],
+        });
+        this.strategyNameControl.reset();
+        this.strategySaved.emit(response.strategy);
+      },
+      error: (error) => {
+        this.isSaving = false;
+        this.snackBar.open(error.message, "Close", {
+          duration: 5000,
+          panelClass: ["error-snackbar"],
+        });
       },
     });
   }
@@ -275,6 +396,7 @@ export class BacktestPanelComponent {
 
   private handleError(error: any) {
     this.isRunning = false;
+    this.isSaving = false;
     const errorMsg = error.message || "Backtest failed";
     this.snackBar.open(errorMsg, "Close", {
       duration: 5000,

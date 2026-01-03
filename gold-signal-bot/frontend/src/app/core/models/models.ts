@@ -18,7 +18,7 @@ export interface TrainingParams {
     use_trend_filter: boolean;
   };
   model: {
-    model_type: "xgboost" | "lightgbm" | "rf";
+    model_type: "xgboost" | "lightgbm" | "rf" | "ensemble";
     n_estimators: number;
     max_depth: number;
     min_samples_split: number;
@@ -65,19 +65,27 @@ export interface Trade {
 }
 
 export interface BacktestMetrics {
+  initial_balance?: number;
+  final_balance?: number;
+  total_profit_money?: number;
   total_pips: number;
   total_trades: number;
   closed_trades: number;
+  open_trades: number;
   winning_trades: number;
   losing_trades: number;
   win_rate: number;
   avg_win: number;
   avg_loss: number;
+  avg_win_money?: number;
+  avg_loss_money?: number;
   profit_factor: number;
+  period_days?: number;
 }
 
 export interface EquityPoint {
   timestamp: string;
+  balance?: number;
   pips: number;
 }
 
@@ -85,6 +93,11 @@ export interface BacktestResults {
   trades: Trade[];
   metrics: BacktestMetrics;
   equity_curve: EquityPoint[];
+  monthly_performance?: {
+    month: string;
+    percent: number;
+    profit: number;
+  }[];
   output: string;
   timestamp: string;
 }
@@ -109,7 +122,7 @@ export interface Config {
     use_trend_filter: boolean;
   };
   model: {
-    model_type: "xgboost" | "lightgbm" | "rf";
+    model_type: "xgboost" | "lightgbm" | "rf" | "ensemble";
     n_estimators: number;
     max_depth: number;
     min_samples_split: number;
@@ -132,13 +145,28 @@ export interface DataFile {
 export interface Strategy {
   id: string;
   name: string;
+  owner_id?: string;
+  is_published?: boolean;
+  created_at?: string;
   training: {
     params: TrainingParams;
     metadata: any;
     timestamp: string;
   };
   backtest: {
-    metrics: any;
+    metrics: BacktestMetrics;
     timestamp: string;
   };
+}
+
+export interface User {
+  id: string;
+  email: string;
+  token: string;
+}
+
+export interface AuthResponse {
+  message: string;
+  user?: User;
+  error?: string;
 }

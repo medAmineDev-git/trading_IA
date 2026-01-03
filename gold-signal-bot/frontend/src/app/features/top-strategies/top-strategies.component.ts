@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, EventEmitter, OnInit, Output } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { MatTableModule } from "@angular/material/table";
 import { MatIconModule } from "@angular/material/icon";
@@ -25,15 +25,18 @@ import { Strategy } from "../../core/models/models";
   styleUrls: ["./top-strategies.component.scss"],
 })
 export class TopStrategiesComponent implements OnInit {
+  @Output() backtestSelected = new EventEmitter<Strategy>();
   strategies: any[] = []; // Changed to any[] to allow for client-side additions like connectedClients
   loading = true;
   displayedColumns: string[] = [
-    "model",
-    "trades",
+    "name",
+    "gainPercent",
     "winRate",
     "profitFactor",
-    "pips",
+    "trades",
+    "age",
     "connectedClients",
+    "backtest",
     "actions",
   ];
 
@@ -47,12 +50,25 @@ export class TopStrategiesComponent implements OnInit {
     this.loading = true;
     this.apiService.getStrategies().subscribe({
       next: (data) => {
-        // Sort by win rate (desc) then profit factor (desc)
-        const sortedData = [...data].sort((a, b) => {
+        // Calculate gain percent and sort
+        const processedData = data.map((s: any) => {
+          const initial = s.backtest.metrics.initial_balance || 10000;
+          const final = s.backtest.metrics.final_balance || initial;
+          const gain_percent = ((final - initial) / initial) * 100;
+          return { ...s, gain_percent };
+        });
+
+        const sortedData = processedData.sort((a: any, b: any) => {
+          // 1. Gain Percent (DESC)
+          if (b.gain_percent !== a.gain_percent)
+            return b.gain_percent - a.gain_percent;
+
+          // 2. Win Rate (DESC)
           const winRateA = a.backtest.metrics.win_rate;
           const winRateB = b.backtest.metrics.win_rate;
           if (winRateB !== winRateA) return winRateB - winRateA;
 
+          // 3. Profit Factor (DESC)
           const pfA = a.backtest.metrics.profit_factor;
           const pfB = b.backtest.metrics.profit_factor;
           return pfB - pfA;
@@ -80,6 +96,10 @@ export class TopStrategiesComponent implements OnInit {
         strategy.is_live = res.is_live;
       },
     });
+  }
+
+  onBacktest(strategy: Strategy): void {
+    this.backtestSelected.emit(strategy);
   }
 
   joinTelegram(strategy: any): void {

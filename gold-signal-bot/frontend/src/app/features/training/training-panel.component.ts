@@ -28,6 +28,7 @@ import {
 })
 export class TrainingPanelComponent {
   @Input() params: TrainingParams | null = null;
+  @Input() showTrainButton = true;
   @Output() trainingComplete = new EventEmitter<void>();
 
   isTraining = false;
@@ -102,18 +103,28 @@ export class TrainingPanelComponent {
     });
   }
 
-  getMetadataValue(key: string): string {
-    return this.trainingResults?.metadata[key] || "N/A";
+  getModelMetrics(): any[] {
+    if (!this.trainingResults || !this.trainingResults.metadata["Models"])
+      return [];
+
+    try {
+      const modelsJson = this.trainingResults.metadata["Models"];
+      const modelsObj = JSON.parse(modelsJson);
+      return Object.values(modelsObj);
+    } catch (e) {
+      console.error("Error parsing model metrics:", e);
+      return [];
+    }
   }
 
   getModelDisplayName(): string {
-    if (!this.params?.model) return "Machine Learning";
-    const type = this.params.model.model_type;
+    const type = this.params?.model?.model_type || "xgboost";
     const map: { [key: string]: string } = {
       xgboost: "XGBoost",
       lightgbm: "LightGBM",
       rf: "Random Forest",
+      ensemble: "Multi-model",
     };
-    return map[type] || "Machine Learning";
+    return map[type] || "XGBoost";
   }
 }

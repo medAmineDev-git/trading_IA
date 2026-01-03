@@ -6,9 +6,10 @@ Handles saving and loading of trained ML models
 import joblib
 import os
 from datetime import datetime
+import config
 
 
-def save_model(model, model_dir='models', model_name='gold_signal_model.pkl'):
+def save_model(model, model_dir=config.MODEL_DIR, model_name='gold_signal_model.pkl'):
     """
     Save trained model to disk
     
@@ -29,7 +30,7 @@ def save_model(model, model_dir='models', model_name='gold_signal_model.pkl'):
     return model_path
 
 
-def load_model(model_path='models/gold_signal_model.pkl'):
+def load_model(model_path=config.MODEL_PATH):
     """
     Load trained model from disk
     
@@ -53,7 +54,7 @@ def load_model(model_path='models/gold_signal_model.pkl'):
         return None
 
 
-def save_training_metadata(metadata, model_dir='models'):
+def save_training_metadata(metadata, model_dir=config.MODEL_DIR):
     """
     Save training metadata (accuracy, date, etc.)
     
@@ -67,6 +68,9 @@ def save_training_metadata(metadata, model_dir='models'):
     with open(metadata_path, 'w') as f:
         f.write(f"Training Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         for key, value in metadata.items():
+            if isinstance(value, (dict, list)):
+                import json
+                value = json.dumps(value)
             f.write(f"{key}: {value}\n")
     
     print(f"✅ Training metadata saved to: {metadata_path}")

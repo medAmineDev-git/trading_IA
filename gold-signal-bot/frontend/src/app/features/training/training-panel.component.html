@@ -67,7 +67,7 @@
   </mat-card>
 
   <!-- Training Action -->
-  <mat-card class="action-card">
+  <mat-card class="action-card" *ngIf="showTrainButton">
     <mat-card-content>
       <div class="action-content">
         <div class="action-info">
@@ -133,57 +133,35 @@
       <mat-card-subtitle>Model trained successfully</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-value positive">
-            {{ getMetadataValue("Accuracy") }}
-          </div>
-          <div class="metric-label">Accuracy</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-value neutral">
-            {{ getMetadataValue("Training Samples") }}
-          </div>
-          <div class="metric-label">Training Samples</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-value neutral">
-            {{ getMetadataValue("Test Samples") }}
-          </div>
-          <div class="metric-label">Test Samples</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-value neutral">
-            {{ getMetadataValue("Features") }}
-          </div>
-          <div class="metric-label">Features</div>
-        </div>
-      </div>
-
-      <div class="metadata-section">
-        <h3>Model Details</h3>
-        <div class="metadata-grid">
-          <div><strong>Ticker:</strong> {{ getMetadataValue("Ticker") }}</div>
-          <div>
-            <strong>Interval:</strong> {{ getMetadataValue("Interval") }}
-          </div>
-          <div><strong>Period:</strong> {{ getMetadataValue("Period") }}</div>
-          <div>
-            <strong>Trees:</strong> {{ getMetadataValue("N_Estimators") }}
-          </div>
-          <div>
-            <strong>Max Depth:</strong> {{ getMetadataValue("Max_Depth") }}
-          </div>
-          <div>
-            <strong>Threshold:</strong> {{ getMetadataValue("Prob_Threshold") }}
+      <div class="metrics-summary">
+        <div class="model-results-grid">
+          <div
+            class="model-metric-card glass-panel"
+            *ngFor="let model of getModelMetrics()"
+          >
+            <div class="model-header">
+              <span class="model-name text-gradient">{{ model.name }}</span>
+              <span
+                class="model-accuracy"
+                [class.positive]="+model.accuracy > 0.5"
+                >{{ (+model.accuracy * 100).toFixed(2) }}%</span
+              >
+            </div>
+            <div class="model-stats">
+              <div class="stat-row">
+                <span class="stat-label">Training Samples</span>
+                <span class="stat-value">{{ model.train_samples }}</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Test Samples</span>
+                <span class="stat-value">{{ model.test_samples }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="next-step">
+      <div class="next-step" *ngIf="showTrainButton">
         <mat-icon>arrow_forward</mat-icon>
         <p>
           Model saved! You can now proceed to the Backtest tab to test your

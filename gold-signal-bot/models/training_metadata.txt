@@ -1,12 +1,11 @@
-Training Date: 2026-01-02 12:36:21
-Accuracy: 0.4721
-Training Samples: 1038
-Test Samples: 1038
-Features: 12
+Training Date: 2026-01-03 20:54:13
 Ticker: XAUUSD
 Interval: D1
-Period: 5207 bars
-N_Estimators: 300
-Max_Depth: 6
-Min_Samples_Split: 5
+Period: 100000 bars
+Model Type: ensemble
+Features: 12
 Prob_Threshold: 0.5
+Models: {"rf": {"name": "Random Forest", "accuracy": "0.4978", "train_samples": 300, "test_samples": 19997}, "xgboost": {"name": "XGBoost", "accuracy": "0.5003", "train_samples": 300, "test_samples": 19997}, "lightgbm": {"name": "LightGBM", "accuracy": "0.4945", "train_samples": 300, "test_samples": 19997}}
+Accuracy: 0.4978
+Training Samples: 300
+Test Samples: 19997

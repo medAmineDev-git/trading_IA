@@ -159,7 +159,7 @@ def evaluate_model(model, X_test, y_test):
     }
 
 
-def main():
+def main(status_callback=None):
     """Main training pipeline"""
     
     print("=" * 60)
@@ -172,11 +172,13 @@ def main():
         return
     
     # Step 2: Add technical indicators
+    if status_callback: status_callback("Computing technical indicators...", 15)
     print("\n🔧 Computing technical indicators...")
     df_with_indicators = add_all_indicators(df)
     print(f"✅ Indicators computed. Total samples: {len(df_with_indicators)}")
     
     # Step 3: Prepare features
+    if status_callback: status_callback("Preparing features for training...", 25)
     print("\n🎯 Preparing features for training...")
     X, y = prepare_features(df_with_indicators)
     print(f"✅ Feature matrix shape: {X.shape}")
@@ -192,43 +194,82 @@ def main():
     print(f"   Training: {len(X_train)} samples")
     print(f"   Testing: {len(X_test)} samples")
     
-    # Step 5: Train model
-    model = train_model(
-        X_train,
-        y_train,
-        model_type=config.MODEL_TYPE,
-        n_estimators=config.N_ESTIMATORS,
-        random_state=config.RANDOM_STATE,
-        max_depth=config.MAX_DEPTH,
-        min_samples_split=config.MIN_SAMPLES_SPLIT
-    )
+    # Step 5: Train & Evaluate models
+    models_to_train = [config.MODEL_TYPE]
+    if config.MODEL_TYPE == 'ensemble':
+        models_to_train = config.ENSEMBLE_MODELS
     
-    # Step 6: Evaluate model
-    metrics = evaluate_model(model, X_test, y_test)
+    trained_models = {}
+    model_metrics = {}
+    total_models = len(models_to_train)
     
-    # Step 7: Save model
-    print("\n💾 Saving model...")
-    save_model(model, model_dir='models', model_name='gold_signal_model.pkl')
+    for i, mtype in enumerate(models_to_train):
+        display_name = {
+            'rf': 'Random Forest',
+            'xgboost': 'XGBoost',
+            'lightgbm': 'LightGBM'
+        }.get(mtype, mtype.upper())
+        
+        progress = 30 + (i / total_models) * 50
+        if status_callback: 
+            status_callback(f"{display_name} Model Training...", int(progress))
+            
+        model = train_model(
+            X_train,
+            y_train,
+            model_type=mtype,
+            n_estimators=config.N_ESTIMATORS,
+            random_state=config.RANDOM_STATE,
+            max_depth=config.MAX_DEPTH,
+            min_samples_split=config.MIN_SAMPLES_SPLIT
+        )
+        trained_models[mtype] = model
+        
+        # Evaluate each model
+        if status_callback: 
+            status_callback(f"Evaluating {display_name}...", int(progress + 5))
+            
+        metrics = evaluate_model(model, X_test, y_test)
+        model_metrics[mtype] = {
+            'name': display_name,
+            'accuracy': f"{metrics['accuracy']:.4f}",
+            'train_samples': metrics['train_samples'],
+            'test_samples': metrics['test_samples']
+        }
+        
+        # Step 7: Save model
+        model_name = 'gold_signal_model.pkl'
+        if config.MODEL_TYPE == 'ensemble':
+            model_name = f'gold_signal_model_{mtype}.pkl'
+        
+        print(f"\n💾 Saving {mtype.upper()} model...")
+        save_model(model, model_dir=config.MODEL_DIR, model_name=model_name)
     
     # Step 8: Save metadata
     metadata = {
-        'Accuracy': f"{metrics['accuracy']:.4f}",
-        'Training Samples': metrics['test_samples'],
-        'Test Samples': len(X_test),
-        'Features': X.shape[1],
         'Ticker': used_ticker,
         'Interval': used_interval,
         'Period': effective_period,
         'Model Type': config.MODEL_TYPE,
-        'N_Estimators': config.N_ESTIMATORS,
-        'Max_Depth': config.MAX_DEPTH,
-        'Min_Samples_Split': config.MIN_SAMPLES_SPLIT,
-        'Prob_Threshold': config.PROB_THRESHOLD
+        'Features': X.shape[1],
+        'Prob_Threshold': config.PROB_THRESHOLD,
+        'Models': model_metrics # This will be stringified or saved as JSON
     }
-    save_training_metadata(metadata, model_dir='models')
+    
+    # Also keep backward compatibility for main UI accuracy
+    main_metrics = list(model_metrics.values())[0]
+    metadata.update({
+        'Accuracy': main_metrics['accuracy'],
+        'Training Samples': main_metrics['train_samples'],
+        'Test Samples': main_metrics['test_samples']
+    })
+    
+    save_training_metadata(metadata, model_dir=config.MODEL_DIR)
     
     print("\n" + "=" * 60)
     print("✅ TRAINING COMPLETE!")
+    if config.MODEL_TYPE == 'ensemble':
+        print(f"All {len(models_to_train)} models trained and saved for ensemble.")
     print("You can now run 'signal_bot.py' to generate signals.")
     print("=" * 60)
 

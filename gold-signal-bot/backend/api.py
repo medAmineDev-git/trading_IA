@@ -14,6 +14,7 @@ from live_manager import live_manager
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import traceback
+import hashlib
 
 # Add parent directory to path to import project modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -29,8 +30,25 @@ CORS(app)  # Enable CORS for Angular dev server
 jobs = {}
 job_results = {}
 last_training_info = {} # Store the params of the last successful training
+last_backtest_results = {} # Store last backtest for manual saving
 
-STRATEGIES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'strategies.json')
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+STRATEGIES_FILE = os.path.join(DATA_DIR, 'strategies.json')
+USERS_FILE = os.path.join(DATA_DIR, 'users.json')
+
+def load_users():
+    if not os.path.exists(USERS_FILE):
+        return {}
+    try:
+        with open(USERS_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_users(users):
+    os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+    with open(USERS_FILE, 'w') as f:
+        json.dump(users, f, indent=4)
 
 def save_strategy(strategy):
     """Save a strategy to the JSON history file"""
@@ -42,8 +60,17 @@ def save_strategy(strategy):
         except:
             strategies = []
     
-    strategies.append(strategy)
-    # Sort by win rate or profit if needed, but for now just reverse chronological
+    # Check if this strategy already exists (for updates)
+    existing_idx = -1
+    for i, s in enumerate(strategies):
+        if s.get('id') == strategy.get('id'):
+            existing_idx = i
+            break
+    
+    if existing_idx >= 0:
+        strategies[existing_idx] = strategy
+    else:
+        strategies.append(strategy)
     
     os.makedirs(os.path.dirname(STRATEGIES_FILE), exist_ok=True)
     with open(STRATEGIES_FILE, 'w') as f:
@@ -301,7 +328,8 @@ def run_backtest_job(job_id, params):
                 'avg_loss': round(avg_loss, 2),
                 'avg_win_money': round(avg_win_money, 2),
                 'avg_loss_money': round(avg_loss_money, 2),
-                'profit_factor': round(abs(avg_win / avg_loss), 2) if avg_loss != 0 else 0
+                'period_days': config.BACKTEST_PERIOD_DAYS,
+
             },
             'equity_curve': equity_curve,
             'monthly_performance': monthly_perf,
@@ -311,18 +339,10 @@ def run_backtest_job(job_id, params):
         
         update_job_status(job_id, JobStatus.COMPLETED, 100, 'Backtest completed successfully!', result)
         
-        # If we have training info, save this as a complete strategy
-        if last_training_info:
-            strategy = {
-                'id': str(uuid.uuid4()),
-                'name': f"Strategy {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                'training': last_training_info,
-                'backtest': {
-                    'metrics': result['metrics'],
-                    'timestamp': result['timestamp']
-                }
-            }
-            save_strategy(strategy)
+        # Store backtest results globally for manual saving
+        # We don't save automatically anymore
+        global last_backtest_results
+        last_backtest_results = result
         
     except Exception as e:
         error_msg = f"Backtest failed: {str(e)}\n{traceback.format_exc()}"
@@ -478,18 +498,174 @@ def get_backtest_results(job_id):
     return jsonify(job_results[job_id])
 
 
+# ==================== AUTH ENDPOINTS ====================
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({'error': 'Email and password required'}), 400
+        
+    users = load_users()
+    if email in users:
+        return jsonify({'error': 'User already exists'}), 400
+        
+    # Mock salt and hash
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    
+    user_id = str(uuid.uuid4())
+    users[email] = {
+        'id': user_id,
+        'email': email,
+        'password': hashed_password,
+        'created_at': datetime.now().isoformat()
+    }
+    
+    save_users(users)
+    return jsonify({
+        'message': 'User registered successfully',
+        'user': {'id': user_id, 'email': email, 'token': f"mock-token-{user_id}"}
+    }), 201
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    users = load_users()
+    user = users.get(email)
+    
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+        
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    if user['password'] != hashed_password:
+        return jsonify({'error': 'Invalid credentials'}), 401
+        
+    return jsonify({
+        'message': 'Login successful',
+        'user': {'id': user['id'], 'email': email, 'token': f"mock-token-{user['id']}"}
+    })
+
+
+# ==================== STRATEGY MANAGEMENT ====================
+
 @app.route('/api/strategies', methods=['GET'])
 def get_strategies():
-    """Get all saved strategies from history"""
+    """Get all PUBLIC (published) strategies"""
     if not os.path.exists(STRATEGIES_FILE):
         return jsonify([])
     
     try:
         with open(STRATEGIES_FILE, 'r') as f:
             strategies = json.load(f)
-        return jsonify(strategies[::-1]) # Return newest first
+        
+        # Filter only published ones
+        published = [s for s in strategies if s.get('is_published', False)]
+        return jsonify(published[::-1]) # Return newest first
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/my-strategies', methods=['GET'])
+def get_my_strategies():
+    """Get strategies for a specific user"""
+    user_id = request.headers.get('Authorization', '').replace('Bearer mock-token-', '')
+    
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    if not os.path.exists(STRATEGIES_FILE):
+        return jsonify([])
+        
+    try:
+        with open(STRATEGIES_FILE, 'r') as f:
+            strategies = json.load(f)
+        
+        my_strategies = [s for s in strategies if s.get('owner_id') == user_id]
+        return jsonify(my_strategies[::-1])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/strategies/save', methods=['POST'])
+def save_personal_strategy():
+    """Manually save a strategy from the last backtest"""
+    user_id = request.headers.get('Authorization', '').replace('Bearer mock-token-', '')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    data = request.get_json()
+    strategy_name = data.get('name')
+    
+    if not strategy_name:
+        return jsonify({'error': 'Strategy name required'}), 400
+        
+    if not last_training_info or not last_backtest_results:
+        return jsonify({'error': 'No recent backtest results to save'}), 400
+        
+    strategy = {
+        'id': str(uuid.uuid4()),
+        'name': strategy_name,
+        'owner_id': user_id,
+        'is_published': False,
+        'training': last_training_info,
+        'backtest': {
+            'metrics': last_backtest_results['metrics'],
+            'timestamp': last_backtest_results['timestamp']
+        },
+        'created_at': datetime.now().isoformat()
+    }
+    
+    save_strategy(strategy)
+    return jsonify({"status": "success", "strategy": strategy})
+
+@app.route('/api/strategies/publish', methods=['POST'])
+def publish_strategy():
+    user_id = request.headers.get('Authorization', '').replace('Bearer mock-token-', '')
+    data = request.get_json()
+    strategy_id = data.get('strategy_id')
+    
+    strategies = []
+    if os.path.exists(STRATEGIES_FILE):
+        with open(STRATEGIES_FILE, 'r') as f:
+            strategies = json.load(f)
+            
+    found = False
+    for s in strategies:
+        if s.get('id') == strategy_id and s.get('owner_id') == user_id:
+            s['is_published'] = not s.get('is_published', False)
+            found = True
+            break
+            
+    if found:
+        # Sort and save
+        with open(STRATEGIES_FILE, 'w') as f:
+            json.dump(strategies, f, indent=4)
+        return jsonify({"status": "success", "is_published": s['is_published']})
+        
+    return jsonify({"error": "Strategy not found or unauthorized"}), 404
+
+@app.route('/api/strategies/remove', methods=['DELETE'])
+def remove_strategy():
+    user_id = request.headers.get('Authorization', '').replace('Bearer mock-token-', '')
+    strategy_id = request.args.get('strategy_id')
+    
+    strategies = []
+    if os.path.exists(STRATEGIES_FILE):
+        with open(STRATEGIES_FILE, 'r') as f:
+            strategies = json.load(f)
+            
+    new_strategies = [s for s in strategies if not (s.get('id') == strategy_id and s.get('owner_id') == user_id)]
+    
+    if len(new_strategies) < len(strategies):
+        with open(STRATEGIES_FILE, 'w') as f:
+            json.dump(new_strategies, f, indent=4)
+        return jsonify({"status": "success"})
+        
+    return jsonify({"error": "Strategy not found or unauthorized"}), 404
 
 
 @app.route('/api/strategies/<strategy_id>/toggle-live', methods=['POST'])

@@ -121,6 +121,46 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
+  // Auth endpoints
+  register(data: any): Observable<any> {
+    return this.http
+      .post(`${this.baseUrl}/auth/register`, data)
+      .pipe(catchError(this.handleError));
+  }
+
+  login(data: any): Observable<any> {
+    return this.http
+      .post(`${this.baseUrl}/auth/login`, data)
+      .pipe(catchError(this.handleError));
+  }
+
+  // Personal Strategy Management
+  getMyStrategies(): Observable<Strategy[]> {
+    return this.http
+      .get<Strategy[]>(`${this.baseUrl}/my-strategies`)
+      .pipe(catchError(this.handleError));
+  }
+
+  savePersonalStrategy(name: string): Observable<any> {
+    return this.http
+      .post(`${this.baseUrl}/strategies/save`, { name })
+      .pipe(catchError(this.handleError));
+  }
+
+  publishStrategy(strategyId: string): Observable<any> {
+    return this.http
+      .post(`${this.baseUrl}/strategies/publish`, { strategy_id: strategyId })
+      .pipe(catchError(this.handleError));
+  }
+
+  removeStrategy(strategyId: string): Observable<any> {
+    return this.http
+      .delete(`${this.baseUrl}/strategies/remove`, {
+        params: { strategy_id: strategyId },
+      })
+      .pipe(catchError(this.handleError));
+  }
+
   // Health check
   healthCheck(): Observable<{ status: string; timestamp: string }> {
     return this.http

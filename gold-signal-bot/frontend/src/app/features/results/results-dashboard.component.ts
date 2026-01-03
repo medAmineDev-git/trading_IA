@@ -57,28 +57,75 @@ export class ResultsDashboardComponent implements OnChanges {
       legend: {
         display: true,
         position: "top",
+        labels: { color: "rgba(255, 255, 255, 0.7)" },
       },
       title: {
         display: true,
-        text: "Equity Curve (Cumulative Pips)",
+        text: "Equity Growth (%)",
+        color: "rgba(255, 255, 255, 0.9)",
+        font: { size: 16, weight: "bold" },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const val = context.parsed.y;
+            return `Return: ${val !== null ? val.toLocaleString() : "0"}%`;
+          },
+        },
       },
     },
     scales: {
       x: {
         type: "time",
-        time: {
-          unit: "day",
-        },
-        title: {
-          display: true,
-          text: "Date",
-        },
+        time: { unit: "day" },
+        grid: { color: "rgba(255, 255, 255, 0.05)" },
+        ticks: { color: "rgba(255, 255, 255, 0.5)" },
       },
       y: {
-        title: {
-          display: true,
-          text: "Cumulative Pips",
+        grid: { color: "rgba(255, 255, 255, 0.05)" },
+        ticks: {
+          color: "rgba(255, 255, 255, 0.5)",
+          callback: (val) => val + "%",
         },
+      },
+    },
+  };
+
+  monthlyChartData: ChartConfiguration["data"] = {
+    datasets: [],
+  };
+
+  monthlyChartOptions: ChartConfiguration["options"] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: "Monthly Performance (%)",
+        color: "rgba(255, 255, 255, 0.9)",
+        font: { size: 16, weight: "bold" },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const val = context.parsed.y;
+            return `Return: ${val !== null ? val : "0"}%`;
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        grid: { color: "rgba(255, 255, 255, 0.05)" },
+        ticks: {
+          color: "rgba(255, 255, 255, 0.5)",
+          callback: (val) => val + "%",
+        },
+      },
+      x: {
+        grid: { display: false },
+        ticks: { color: "rgba(255, 255, 255, 0.5)" },
       },
     },
   };
@@ -92,26 +139,85 @@ export class ResultsDashboardComponent implements OnChanges {
   updateChartData() {
     if (!this.results) return;
 
-    const labels = this.results.equity_curve.map(
-      (point) => new Date(point.timestamp)
+    // Equity Percentage Chart
+    const initialBalance = this.results.metrics.initial_balance || 10000;
+    const labels = this.results.equity_curve.map((point) =>
+      point.timestamp === "Start"
+        ? new Date(this.results!.trades[0]?.timestamp || Date.now())
+        : new Date(point.timestamp)
     );
-    const data = this.results.equity_curve.map((point) => point.pips);
+    const data = this.results.equity_curve.map((point) => {
+      const balance = point.balance || initialBalance;
+      const percentGain = ((balance - initialBalance) / initialBalance) * 100;
+      return Number(percentGain.toFixed(2));
+    });
 
     this.equityChartData = {
       labels,
       datasets: [
         {
-          label: "Cumulative Pips",
+          label: "Equity Growth (%)",
           data,
-          borderColor: "#3f51b5",
-          backgroundColor: "rgba(63, 81, 181, 0.1)",
+          borderColor: "#9262f9",
+          backgroundColor: "rgba(146, 98, 249, 0.1)",
           fill: true,
           tension: 0.4,
+          pointRadius: labels.length > 50 ? 0 : 3,
         },
       ],
     };
 
+    // Monthly Performance Chart
+    if (this.results.monthly_performance) {
+      this.monthlyChartData = {
+        labels: this.results.monthly_performance.map((m) => m.month),
+        datasets: [
+          {
+            label: "Monthly %",
+            data: this.results.monthly_performance.map((m) => m.percent),
+            backgroundColor: this.results.monthly_performance.map((m) =>
+              m.percent >= 0
+                ? "rgba(76, 175, 80, 0.6)"
+                : "rgba(244, 67, 54, 0.6)"
+            ),
+            borderColor: this.results.monthly_performance.map((m) =>
+              m.percent >= 0 ? "#4caf50" : "#f44336"
+            ),
+            borderWidth: 1,
+          },
+        ],
+      };
+    }
+
     this.chart?.update();
+  }
+
+  copyReport() {
+    if (!this.results) return;
+
+    const m = this.results.metrics;
+    const netReturn = this.getNetReturn();
+    const report = `📊 TRADE SUMMARY:
+   Total Signals: ${m.total_trades}
+   Closed Trades: ${m.closed_trades}
+   Open Trades: ${m.open_trades}
+
+💰 P&L METRICS (Total):
+   Total Profit: $${
+     m.total_profit_money?.toLocaleString() || "0"
+   } (${netReturn}%)
+   Total Pips: ${m.total_pips}
+   Winning Trades: ${m.winning_trades} ✅
+   Losing Trades: ${m.losing_trades} ❌
+   Win Rate: ${m.win_rate}%
+   Avg Win: $${m.avg_win_money?.toLocaleString() || "0"} (${m.avg_win} pips)
+   Avg Loss: $${m.avg_loss_money?.toLocaleString() || "0"} (${m.avg_loss} pips)
+   Profit Factor: ${m.profit_factor}`;
+
+    navigator.clipboard.writeText(report).then(() => {
+      // You could add a toast notification here if available
+      alert("Report copied to clipboard!");
+    });
   }
 
   exportToCSV() {
@@ -159,5 +265,13 @@ export class ResultsDashboardComponent implements OnChanges {
   getTradeClass(trade: Trade): string {
     if (!trade.pips) return "";
     return trade.pips > 0 ? "positive" : "negative";
+  }
+
+  getNetReturn(): string {
+    if (!this.results || !this.results.metrics.initial_balance) return "0.00";
+    const initial = this.results.metrics.initial_balance;
+    const final = this.results.metrics.final_balance || initial;
+    const netReturn = ((final - initial) / initial) * 100;
+    return netReturn.toFixed(2);
   }
 }

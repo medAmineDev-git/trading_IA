@@ -14,7 +14,17 @@ import { BacktestPanelComponent } from "../backtesting/backtest-panel.component"
 import { ResultsDashboardComponent } from "../results/results-dashboard.component";
 import { TopStrategiesComponent } from "../top-strategies/top-strategies.component";
 import { ApiService } from "../../core/services/api.service";
-import { TrainingParams, BacktestResults } from "../../core/models/models";
+import {
+  TrainingParams,
+  TrainingResults,
+  JobStatus,
+  BacktestResults,
+  Strategy,
+  User,
+} from "../../core/models/models";
+import { AuthComponent } from "../auth/auth.component";
+import { MyStrategiesComponent } from "../my-strategies/my-strategies.component";
+import { AuthService } from "../../core/services/auth.service";
 
 @Component({
   selector: "app-dashboard",
@@ -34,137 +44,236 @@ import { TrainingParams, BacktestResults } from "../../core/models/models";
     BacktestPanelComponent,
     ResultsDashboardComponent,
     TopStrategiesComponent,
+    AuthComponent,
+    MyStrategiesComponent,
   ],
   template: `
     <div class="dashboard-container">
-      <!-- Hero Section -->
-      <section class="hero-section">
-        <h1 class="hero-title">
-          Master Your Trading with <br />
-          <span class="text-gradient">FundedLab</span>
-        </h1>
-        <p class="hero-subtitle">
-          Configure, Train, Backtest, and Analyze your strategies with our
-          advanced ML engine.
-        </p>
-
-        <div class="stats-row">
-          <div class="stat-badge">
-            <span class="label">Status</span>
-            <span class="value text-gradient">Active</span>
-          </div>
-          <div class="stat-badge">
-            <span class="label">Model</span>
-            <span class="value">{{
-              getModelDisplayName(trainingParams?.model?.model_type)
-            }}</span>
-          </div>
-
-          <button
-            mat-flat-button
-            color="accent"
-            (click)="openParams()"
-            *ngIf="!showParamsCard"
-          >
-            <mat-icon>tune</mat-icon>
-            Configure Training Parameters
+      <!-- Detail View Area (Conditional) -->
+      <div
+        class="detail-view-container"
+        *ngIf="selectedStrategy; else mainView"
+      >
+        <div class="detail-header glass-panel mb-16">
+          <button mat-icon-button (click)="selectedStrategy = null">
+            <mat-icon>arrow_back</mat-icon>
           </button>
+          <div class="header-info">
+            <h2 class="text-gradient">{{ selectedStrategy.name }}</h2>
+            <p class="subtitle">Strategy Insights & Backtest Analysis</p>
+          </div>
         </div>
 
-        <!-- Configuration Card -->
-        <div class="config-card glass-panel" *ngIf="showParamsCard">
-          <div class="config-header">
-            <h2>Training Parameters</h2>
-            <button mat-icon-button (click)="closeParams(false)">
-              <mat-icon>close</mat-icon>
-            </button>
-          </div>
-
-          <app-parameters-form
-            [initialParams]="trainingParams"
-            (paramsChange)="onParamsChange($event)"
+        <div class="glass-panel detail-content">
+          <app-training-panel
+            [params]="selectedStrategy.training.params"
+            [showTrainButton]="false"
           >
-          </app-parameters-form>
+          </app-training-panel>
 
-          <div class="card-multi-actions">
-            <button mat-button (click)="closeParams(false)">Cancel</button>
-            <button
-              mat-raised-button
-              color="primary"
-              (click)="closeParams(true)"
-            >
-              <mat-icon>check</mat-icon>
-              Validate
-            </button>
+          <mat-divider style="margin: 40px 0"></mat-divider>
+
+          <app-backtest-panel
+            [params]="selectedStrategy.training.params"
+            (backtestComplete)="onBacktestComplete($event)"
+          >
+          </app-backtest-panel>
+
+          <div class="results-container" *ngIf="backtestResults">
+            <mat-divider style="margin: 24px 0"></mat-divider>
+            <h3 class="results-title">Backtest Results</h3>
+            <app-results-dashboard
+              [results]="backtestResults"
+            ></app-results-dashboard>
           </div>
         </div>
-      </section>
-
-      <!-- Main Content Tabs -->
-      <div class="glass-panel main-content-panel">
-        <mat-tab-group
-          [(selectedIndex)]="selectedTabIndex"
-          (selectedIndexChange)="onTabChange($event)"
-          animationDuration="0ms"
-          mat-stretch-tabs="false"
-          mat-align-tabs="center"
-          class="custom-tabs"
-        >
-          <!-- Training Tab -->
-          <mat-tab label="Training">
-            <div class="tab-content">
-              <app-training-panel
-                [params]="trainingParams"
-                (trainingComplete)="onTrainingComplete()"
-              >
-              </app-training-panel>
-
-              <div class="manual-nav">
-                <button
-                  mat-raised-button
-                  color="primary"
-                  class="action-button"
-                  [disabled]="!isModelTrained"
-                  (click)="goToBacktest()"
-                >
-                  <mat-icon>assessment</mat-icon>
-                  Backtest Trained Model
-                </button>
-              </div>
-            </div>
-          </mat-tab>
-
-          <!-- Backtest Tab -->
-          <mat-tab label="Backtest">
-            <div class="tab-content">
-              <app-backtest-panel
-                (backtestComplete)="onBacktestComplete($event)"
-              >
-              </app-backtest-panel>
-
-              <!-- Results Display Section -->
-              <div class="results-container" *ngIf="backtestResults">
-                <mat-divider style="margin: 24px 0"></mat-divider>
-                <h3 class="results-title">Backtest Results</h3>
-                <app-results-dashboard
-                  [results]="backtestResults"
-                ></app-results-dashboard>
-              </div>
-            </div>
-          </mat-tab>
-
-          <!-- Top Strategies Tab -->
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon style="margin-right: 8px">military_tech</mat-icon>
-              Top Strategies
-            </ng-template>
-            <div class="tab-content">
-              <app-top-strategies></app-top-strategies>
-            </div>
-          </mat-tab>
-        </mat-tab-group>
       </div>
+
+      <!-- Main Dashboard View -->
+      <ng-template #mainView>
+        <!-- Hero Section -->
+        <section class="hero-section">
+          <h1 class="hero-title">
+            Master Your Trading with <br />
+            <span class="text-gradient">FundedLab</span>
+          </h1>
+          <p class="hero-subtitle">
+            Configure, Train, Backtest, and Analyze your strategies with our
+            advanced ML engine.
+          </p>
+
+          <div class="stats-row">
+            <div class="stat-badge">
+              <span class="label">Status</span>
+              <span class="value text-gradient">Active</span>
+            </div>
+            <div class="stat-badge">
+              <span class="label">Model</span>
+              <span class="value">{{
+                selectedTabIndex === 1
+                  ? "Multi-model"
+                  : getModelDisplayName(trainingParams?.model?.model_type)
+              }}</span>
+            </div>
+
+            <button
+              mat-flat-button
+              color="accent"
+              (click)="openParams()"
+              *ngIf="!showParamsCard"
+            >
+              <mat-icon>tune</mat-icon>
+              Configure Training Parameters
+            </button>
+          </div>
+
+          <!-- Configuration Card -->
+          <div class="config-card glass-panel" *ngIf="showParamsCard">
+            <div class="config-header">
+              <h2>Training Parameters</h2>
+              <button mat-icon-button (click)="closeParams(false)">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <app-parameters-form
+              [initialParams]="trainingParams"
+              (paramsChange)="onParamsChange($event)"
+            >
+            </app-parameters-form>
+
+            <div class="card-multi-actions">
+              <button mat-button (click)="closeParams(false)">Cancel</button>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="closeParams(true)"
+              >
+                <mat-icon>check</mat-icon>
+                Validate
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Main Content Tabs -->
+        <div class="glass-panel main-content-panel">
+          <mat-tab-group
+            [(selectedIndex)]="selectedTabIndex"
+            (selectedIndexChange)="onTabChange($event)"
+            animationDuration="0ms"
+            mat-stretch-tabs="false"
+            mat-align-tabs="center"
+            class="custom-tabs"
+          >
+            <mat-tab label="Training & Backtest">
+              <div class="tab-content">
+                <app-training-panel
+                  [params]="trainingParams"
+                  (trainingComplete)="onTrainingComplete()"
+                >
+                </app-training-panel>
+
+                <!-- Backtest Display Section - Only shown after training -->
+                <div
+                  class="backtest-section"
+                  *ngIf="isModelTrained"
+                  style="margin-top: 40px;"
+                >
+                  <mat-divider style="margin-bottom: 40px;"></mat-divider>
+
+                  <app-backtest-panel
+                    [params]="trainingParams"
+                    (backtestComplete)="onBacktestComplete($event)"
+                  >
+                  </app-backtest-panel>
+
+                  <!-- Results Display Section -->
+                  <div class="results-container" *ngIf="backtestResults">
+                    <mat-divider style="margin: 24px 0"></mat-divider>
+                    <h3 class="results-title">Backtest Results</h3>
+                    <app-results-dashboard
+                      [results]="backtestResults"
+                    ></app-results-dashboard>
+                  </div>
+                </div>
+              </div>
+            </mat-tab>
+
+            <!-- Multi-model Training Tab -->
+            <mat-tab label="Multi-model Training">
+              <ng-template mat-tab-label>
+                <mat-icon style="margin-right: 8px">hub</mat-icon>
+                Multi-model Ensemble
+              </ng-template>
+              <div class="tab-content">
+                <div class="ensemble-info card mb-16">
+                  <h3>🚀 Elite Voting Ensemble</h3>
+                  <p>
+                    Train RF, XGBoost, and LightGBM simultaneously and combine
+                    their predictions for maximum reliability.
+                  </p>
+                </div>
+                <app-training-panel
+                  [params]="ensembleParams"
+                  (trainingComplete)="onTrainingComplete()"
+                >
+                </app-training-panel>
+
+                <div
+                  class="backtest-section"
+                  *ngIf="isEnsembleModelTrained"
+                  style="margin-top: 40px;"
+                >
+                  <mat-divider style="margin-bottom: 40px;"></mat-divider>
+                  <app-backtest-panel
+                    [params]="ensembleParams"
+                    (backtestComplete)="onBacktestComplete($event)"
+                  >
+                  </app-backtest-panel>
+
+                  <!-- Results Display Section -->
+                  <div class="results-container" *ngIf="backtestResults">
+                    <mat-divider style="margin: 24px 0"></mat-divider>
+                    <h3 class="results-title">Backtest Results</h3>
+                    <app-results-dashboard
+                      [results]="backtestResults"
+                    ></app-results-dashboard>
+                  </div>
+                </div>
+              </div>
+            </mat-tab>
+
+            <!-- Top Strategies Tab -->
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon style="margin-right: 8px">military_tech</mat-icon>
+                Top Strategies
+              </ng-template>
+              <div class="tab-content">
+                <app-top-strategies
+                  (backtestSelected)="onStrategyBacktest($event)"
+                ></app-top-strategies>
+              </div>
+            </mat-tab>
+            <!-- My Strategies Tab -->
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon style="margin-right: 8px">person</mat-icon>
+                My Strategies
+              </ng-template>
+              <div class="tab-content" style="min-height: 400px;">
+                <app-my-strategies
+                  *ngIf="user; else authView"
+                ></app-my-strategies>
+                <ng-template #authView>
+                  <app-auth></app-auth>
+                </ng-template>
+              </div>
+            </mat-tab>
+          </mat-tab-group>
+        </div>
+      </ng-template>
     </div>
   `,
   styles: [
@@ -173,6 +282,31 @@ import { TrainingParams, BacktestResults } from "../../core/models/models";
         padding: 40px 24px;
         max-width: 1200px;
         margin: 0 auto;
+      }
+
+      .detail-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 24px;
+        border-radius: 16px;
+
+        .header-info {
+          h2 {
+            margin: 0;
+            font-size: 1.8rem;
+          }
+          .subtitle {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+          }
+        }
+      }
+
+      .detail-content {
+        padding: 40px 24px;
+        border-radius: 16px;
       }
 
       /* Hero Section */
@@ -367,11 +501,20 @@ export class DashboardComponent implements OnInit {
   trainingParams: TrainingParams | null = null;
   lastSavedParams: TrainingParams | null = null;
   backtestResults: BacktestResults | null = null;
+  selectedStrategy: Strategy | null = null;
 
   showParamsCard = false;
   isModelTrained = false;
+  isEnsembleModelTrained = false;
+  user: User | null = null;
 
-  constructor(private apiService: ApiService, private snackBar: MatSnackBar) {}
+  constructor(
+    private apiService: ApiService,
+    private authService: AuthService,
+    private snackBar: MatSnackBar
+  ) {
+    this.authService.user$.subscribe((user) => (this.user = user));
+  }
 
   ngOnInit() {
     // Load default configuration
@@ -429,9 +572,12 @@ export class DashboardComponent implements OnInit {
       panelClass: ["success-snackbar"],
     });
 
-    // Mark as trained, enable button, BUT DO NOT auto-switch
-    this.isModelTrained = true;
-    // this.selectedTabIndex = 2; // Auto-switch removed
+    // Mark based on current tab
+    if (this.selectedTabIndex === 1) {
+      this.isEnsembleModelTrained = true;
+    } else {
+      this.isModelTrained = true;
+    }
   }
 
   onBacktestComplete(results: BacktestResults) {
@@ -440,16 +586,12 @@ export class DashboardComponent implements OnInit {
       duration: 3000,
       panelClass: ["success-snackbar"],
     });
-    // No auto-switch needed as results appear in current tab
+    // Results appear in the current tab
   }
 
-  goToBacktest() {
-    this.selectedTabIndex = 1; // Index 1 is the Backtest tab (Training is 0, Results is 2... wait, Training is 0, Backtest is 1, Results is 2 based on current layout? No, index check needed)
-    // Actually, checking template:
-    // Tab 0: Training (Parameters removed)
-    // Tab 1: Backtest
-    // Tab 2: Results
-    this.selectedTabIndex = 1;
+  onStrategyBacktest(strategy: Strategy) {
+    this.selectedStrategy = strategy;
+    this.backtestResults = null; // Reset results when opening new strategy
   }
 
   onTabChange(index: number) {
@@ -461,7 +603,24 @@ export class DashboardComponent implements OnInit {
       xgboost: "XGBoost",
       lightgbm: "LightGBM",
       rf: "Random Forest",
+      ensemble: "Ensemble (Multi-Model)",
     };
-    return map[type || ""] || "Not Configured";
+    return map[type || ""] || "XGBoost";
+  }
+
+  get ensembleParams(): TrainingParams | null {
+    if (!this.trainingParams) return null;
+    return {
+      ...this.trainingParams,
+      model: {
+        ...this.trainingParams.model,
+        model_type: "ensemble",
+      },
+    };
+  }
+
+  logout() {
+    this.authService.logout();
+    this.snackBar.open("Logged out", "Close", { duration: 2000 });
   }
 }

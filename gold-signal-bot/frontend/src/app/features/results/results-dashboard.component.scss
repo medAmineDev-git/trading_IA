@@ -97,3 +97,63 @@ mat-card-header {
   align-items: center;
   margin-bottom: 16px;
 }
+.summary-report-card {
+  border: 1px solid rgba(146, 98, 249, 0.3) !important;
+  
+  .mat-mdc-card-title {
+    font-size: 1.6rem !important;
+    font-weight: 700;
+  }
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 32px;
+  padding: 16px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summary-section {
+  h3 {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+  }
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--border-radius-sm);
+
+  .label {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  .value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    
+    &.accent { color: var(--text-accent); font-size: 1.3rem; }
+    &.positive { color: #4caf50; }
+    &.negative { color: #ff4d4d; }
+  }
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}

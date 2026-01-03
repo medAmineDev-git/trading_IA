@@ -22,24 +22,33 @@ class GoldBacktester:
     def __init__(self, days=None, model_path=config.MODEL_PATH):
         """
         Initialize backtester
-        
-        Args:
-            days: Number of days to backtest (default from config.BACKTEST_PERIOD_DAYS)
-            model_path: Path to trained model
         """
         if days is None:
             days = config.BACKTEST_PERIOD_DAYS
         self.days = days
         self.model_path = model_path
-        self.model = load_model(model_path)
         self.trades = []
         self.ticker = config.TICKER
         self.interval = config.INTERVAL
         self.used_ticker = self.ticker
         self.used_interval = self.interval
+        self.model_type = getattr(config, 'MODEL_TYPE', 'rf')
         
-        if self.model is None:
-            raise Exception("Model not found. Please run train_model.py first.")
+        # Load models
+        if self.model_type == 'ensemble':
+            self.models = {}
+            for mtype in config.ENSEMBLE_MODELS:
+                m_path = os.path.join(os.path.dirname(model_path), f'gold_signal_model_{mtype}.pkl')
+                m = load_model(m_path)
+                if m is not None:
+                    self.models[mtype] = m
+            if not self.models:
+                raise Exception("No component models found for ensemble. Please train ensemble first.")
+            print(f"✅ Loaded ensemble with {len(self.models)} models")
+        else:
+            self.model = load_model(model_path)
+            if self.model is None:
+                raise Exception("Model not found. Please run train_model.py first.")
     
     def fetch_data(self):
         """Fetch historical data for backtest period"""
@@ -85,6 +94,12 @@ class GoldBacktester:
             return
         
         print(f"\n🔄 Running backtest on {self.days} days of data...")
+        print(f"   Model Type: {self.model_type}")
+        print(f"   RSI Period: {getattr(config, 'RSI_PERIOD', 'N/A')}")
+        print(f"   Prob Threshold: {getattr(config, 'PROB_THRESHOLD', 'N/A')}")
+        print(f"   Use ATR Stops: {getattr(config, 'USE_ATR_STOPS', 'N/A')}")
+        print(f"   Stop Loss %: {getattr(config, 'STOP_LOSS_PERCENT', 'N/A')}")
+        print(f"   Take Profit %: {getattr(config, 'TAKE_PROFIT_PERCENT', 'N/A')}")
 
         # Debug: show columns to diagnose missing OHLCV fields
         print(f"   Data columns: {list(data.columns)}")
@@ -101,8 +116,19 @@ class GoldBacktester:
         X, _ = prepare_features(data_with_indicators)
         
         # Make predictions with probabilities
-        predictions = self.model.predict(X)
-        probabilities = self.model.predict_proba(X)
+        if self.model_type == 'ensemble':
+            # Aggregate probabilities from all models
+            all_probs = []
+            for mtype, m in self.models.items():
+                all_probs.append(m.predict_proba(X))
+            
+            # Average probabilities
+            avg_probs = np.mean(all_probs, axis=0)
+            probabilities = avg_probs
+            predictions = (probabilities[:, 1] > 0.5).astype(int)
+        else:
+            predictions = self.model.predict(X)
+            probabilities = self.model.predict_proba(X)
         
         # Create results dataframe
         results_df = data_with_indicators.copy()

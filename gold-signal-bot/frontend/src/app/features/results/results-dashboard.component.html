@@ -4,12 +4,15 @@
     <mat-card class="metric-card">
       <div
         class="metric-value"
-        [class.positive]="results.metrics.total_pips > 0"
-        [class.negative]="results.metrics.total_pips < 0"
+        [class.positive]="(results.metrics.total_profit_money || 0) > 0"
+        [class.negative]="(results.metrics.total_profit_money || 0) < 0"
       >
-        {{ results.metrics.total_pips }}
+        {{
+          results.metrics.total_profit_money
+            | currency : "USD" : "symbol" : "1.0-0"
+        }}
       </div>
-      <div class="metric-label">Total Pips</div>
+      <div class="metric-label">Total Profit</div>
     </mat-card>
 
     <mat-card class="metric-card">
@@ -18,8 +21,8 @@
     </mat-card>
 
     <mat-card class="metric-card">
-      <div class="metric-value neutral">{{ results.metrics.total_trades }}</div>
-      <div class="metric-label">Total Trades</div>
+      <div class="metric-value neutral">{{ getNetReturn() }}%</div>
+      <div class="metric-label">Net Return</div>
     </mat-card>
 
     <mat-card class="metric-card">
@@ -30,24 +33,127 @@
     </mat-card>
 
     <mat-card class="metric-card">
-      <div class="metric-value positive">{{ results.metrics.avg_win }}</div>
-      <div class="metric-label">Avg Win (Pips)</div>
+      <div class="metric-value positive">
+        {{
+          results.metrics.avg_win_money | currency : "USD" : "symbol" : "1.0-0"
+        }}
+      </div>
+      <div class="metric-label">Avg Win ($)</div>
     </mat-card>
 
     <mat-card class="metric-card">
-      <div class="metric-value negative">{{ results.metrics.avg_loss }}</div>
-      <div class="metric-label">Avg Loss (Pips)</div>
+      <div class="metric-value negative">
+        {{
+          results.metrics.avg_loss_money | currency : "USD" : "symbol" : "1.0-0"
+        }}
+      </div>
+      <div class="metric-label">Avg Loss ($)</div>
     </mat-card>
   </div>
+
+  <!-- Premium Trade Summary Report -->
+  <mat-card class="summary-report-card glass-panel mb-16">
+    <mat-card-header>
+      <mat-card-title class="text-gradient"
+        >📊 Trade Summary Report</mat-card-title
+      >
+      <button mat-raised-button color="primary" (click)="copyReport()">
+        <mat-icon>content_copy</mat-icon>
+        Copy Report
+      </button>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="summary-grid">
+        <div class="summary-section">
+          <h3>📈 TRADE SUMMARY</h3>
+          <div class="summary-item">
+            <span class="label">Started Balance:</span>
+            <span class="value">{{
+              results.metrics.initial_balance
+                | currency : "USD" : "symbol" : "1.0-0"
+            }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Final Balance:</span>
+            <span class="value accent">{{
+              results.metrics.final_balance
+                | currency : "USD" : "symbol" : "1.2-2"
+            }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Total Profit:</span>
+            <span
+              class="value"
+              [class.positive]="(results.metrics.total_profit_money || 0) > 0"
+              [class.negative]="(results.metrics.total_profit_money || 0) < 0"
+            >
+              {{
+                results.metrics.total_profit_money
+                  | currency : "USD" : "symbol" : "1.2-2"
+              }}
+            </span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Total Signals:</span>
+            <span class="value">{{ results.metrics.total_trades }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Closed Trades:</span>
+            <span class="value">{{ results.metrics.closed_trades }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Open Trades:</span>
+            <span class="value">{{ results.metrics.open_trades }}</span>
+          </div>
+        </div>
+
+        <div class="summary-section">
+          <h3>💰 P&L METRICS</h3>
+          <div class="summary-item">
+            <span class="label">Total Pips:</span>
+            <span class="value accent">{{ results.metrics.total_pips }}</span>
+          </div>
+          <div class="summary-row">
+            <div class="summary-item">
+              <span class="label">Winning Trades:</span>
+              <span class="value positive"
+                >{{ results.metrics.winning_trades }} ✅</span
+              >
+            </div>
+            <div class="summary-item">
+              <span class="label">Losing Trades:</span>
+              <span class="value negative"
+                >{{ results.metrics.losing_trades }} ❌</span
+              >
+            </div>
+          </div>
+          <div class="summary-row">
+            <div class="summary-item">
+              <span class="label">Avg Win:</span>
+              <span class="value positive"
+                >{{ results.metrics.avg_win }} pips</span
+              >
+            </div>
+            <div class="summary-item">
+              <span class="label">Avg Loss:</span>
+              <span class="value negative"
+                >{{ results.metrics.avg_loss }} pips</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
 
   <!-- Tabs for detailed views -->
   <mat-tab-group>
     <!-- Charts Tab -->
-    <mat-tab label="Charts">
-      <div class="tab-content">
-        <mat-card>
+    <mat-tab label="Analytics Charts">
+      <div class="tab-content charts-grid">
+        <mat-card class="glass-panel chart-card">
           <mat-card-header>
-            <mat-card-title>Equity Curve</mat-card-title>
+            <mat-card-title>Equity Growth (%)</mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <div class="chart-container">
@@ -56,6 +162,26 @@
                 [data]="equityChartData"
                 [options]="equityChartOptions"
                 type="line"
+              >
+              </canvas>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card
+          class="glass-panel chart-card"
+          *ngIf="results.monthly_performance"
+        >
+          <mat-card-header>
+            <mat-card-title>Monthly Percent Return</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="chart-container">
+              <canvas
+                baseChart
+                [data]="monthlyChartData"
+                [options]="monthlyChartOptions"
+                type="bar"
               >
               </canvas>
             </div>
@@ -160,59 +286,6 @@
                   *matRowDef="let row; columns: displayedColumns"
                 ></tr>
               </table>
-            </div>
-          </mat-card-content>
-        </mat-card>
-      </div>
-    </mat-tab>
-
-    <!-- Statistics Tab -->
-    <mat-tab label="Statistics">
-      <div class="tab-content">
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>Detailed Statistics</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="stats-grid">
-              <div class="stat-item">
-                <strong>Total Trades:</strong>
-                <span>{{ results.metrics.total_trades }}</span>
-              </div>
-              <div class="stat-item">
-                <strong>Closed Trades:</strong>
-                <span>{{ results.metrics.closed_trades }}</span>
-              </div>
-              <div class="stat-item">
-                <strong>Winning Trades:</strong>
-                <span class="positive">{{
-                  results.metrics.winning_trades
-                }}</span>
-              </div>
-              <div class="stat-item">
-                <strong>Losing Trades:</strong>
-                <span class="negative">{{
-                  results.metrics.losing_trades
-                }}</span>
-              </div>
-              <div class="stat-item">
-                <strong>Win Rate:</strong>
-                <span>{{ results.metrics.win_rate }}%</span>
-              </div>
-              <div class="stat-item">
-                <strong>Profit Factor:</strong>
-                <span>{{ results.metrics.profit_factor }}</span>
-              </div>
-              <div class="stat-item">
-                <strong>Average Win:</strong>
-                <span class="positive">{{ results.metrics.avg_win }} pips</span>
-              </div>
-              <div class="stat-item">
-                <strong>Average Loss:</strong>
-                <span class="negative"
-                  >{{ results.metrics.avg_loss }} pips</span
-                >
-              </div>
             </div>
           </mat-card-content>
         </mat-card>

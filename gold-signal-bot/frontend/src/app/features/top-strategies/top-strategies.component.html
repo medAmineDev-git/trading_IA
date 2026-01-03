@@ -23,29 +23,31 @@
       class="strategy-table"
       *ngIf="strategies.length > 0"
     >
-      <!-- Model Column -->
-      <ng-container matColumnDef="model">
-        <th mat-header-cell *matHeaderCellDef>Model</th>
+      <!-- Name Column -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Strategy Name</th>
         <td mat-cell *matCellDef="let strategy">
-          <span
-            class="model-badge"
-            [ngClass]="getModelClass(strategy.training.params.model.model_type)"
-          >
-            {{ strategy.training.params.model.model_type || "XGBoost" }}
-          </span>
+          <span class="strategy-name">{{ strategy.name }}</span>
           <mat-icon
             *ngIf="isTopPerformer(strategy)"
             class="premium-badge"
-            style="
-              font-size: 16px;
-              width: 16px;
-              height: 16px;
-              vertical-align: middle;
-              margin-left: 8px;
-            "
             matTooltip="Top Performer"
             >verified</mat-icon
           >
+        </td>
+      </ng-container>
+
+      <!-- Gain Percent Column -->
+      <ng-container matColumnDef="gainPercent">
+        <th mat-header-cell *matHeaderCellDef>Gain (%)</th>
+        <td mat-cell *matCellDef="let strategy">
+          <span
+            class="metric-chip"
+            [ngClass]="strategy.gain_percent >= 0 ? 'positive' : 'negative'"
+          >
+            {{ strategy.gain_percent > 0 ? "+" : ""
+            }}{{ strategy.gain_percent | number : "1.2-2" }}%
+          </span>
         </td>
       </ng-container>
 
@@ -80,21 +82,11 @@
         </td>
       </ng-container>
 
-      <!-- Pips Column -->
-      <ng-container matColumnDef="pips">
-        <th mat-header-cell *matHeaderCellDef>Total Pips</th>
+      <!-- Age Column -->
+      <ng-container matColumnDef="age">
+        <th mat-header-cell *matHeaderCellDef>Age (Days)</th>
         <td mat-cell *matCellDef="let strategy">
-          <span
-            class="metric-chip"
-            [ngClass]="
-              strategy.backtest.metrics.total_pips >= 0
-                ? 'positive'
-                : 'negative'
-            "
-          >
-            {{ strategy.backtest.metrics.total_pips > 0 ? "+" : ""
-            }}{{ strategy.backtest.metrics.total_pips }}
-          </span>
+          {{ strategy.backtest.metrics.period_days || "N/A" }}
         </td>
       </ng-container>
 
@@ -108,6 +100,22 @@
             >
             {{ strategy.connectedClients }}
           </div>
+        </td>
+      </ng-container>
+
+      <!-- Backtest Strategy Column -->
+      <ng-container matColumnDef="backtest">
+        <th mat-header-cell *matHeaderCellDef>Analysis</th>
+        <td mat-cell *matCellDef="let strategy">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="onBacktest(strategy)"
+            class="analysis-btn"
+          >
+            <mat-icon>analytics</mat-icon>
+            Backtest
+          </button>
         </td>
       </ng-container>
 

@@ -107,8 +107,9 @@ class TimeframeComparator:
         print(f"📈 Test Accuracy: {test_acc:.4f}")
         
         # Save model
-        model_path = f'models/gold_signal_model_{timeframe_name}.pkl'
-        os.makedirs('models', exist_ok=True)
+        model_name = f'gold_signal_model_{timeframe_name}.pkl'
+        model_path = os.path.join(config.MODEL_DIR, model_name)
+        os.makedirs(config.MODEL_DIR, exist_ok=True)
         with open(model_path, 'wb') as f:
             pickle.dump(model, f)
         print(f"💾 Model saved: {model_path}")
