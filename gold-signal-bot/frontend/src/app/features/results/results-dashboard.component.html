@@ -33,6 +33,13 @@
     </mat-card>
 
     <mat-card class="metric-card">
+      <div class="metric-value negative">
+        {{ results.metrics.max_drawdown_percent }}%
+      </div>
+      <div class="metric-label">Max Drawdown</div>
+    </mat-card>
+
+    <mat-card class="metric-card">
       <div class="metric-value positive">
         {{
           results.metrics.avg_win_money | currency : "USD" : "symbol" : "1.0-0"

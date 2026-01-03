@@ -120,6 +120,9 @@ def sync_config(params):
         config.PROB_THRESHOLD = float(risk.get('prob_threshold', config.PROB_THRESHOLD))
         config.USE_ATR_STOPS = bool(risk.get('use_atr_stops', config.USE_ATR_STOPS))
         config.USE_TREND_FILTER = bool(risk.get('use_trend_filter', config.USE_TREND_FILTER))
+        config.USE_VOLATILITY_FILTER = bool(risk.get('use_volatility_filter', config.USE_VOLATILITY_FILTER))
+        config.ATR_FILTER_MIN = float(risk.get('atr_filter_min', config.ATR_FILTER_MIN))
+        config.ATR_FILTER_MAX = float(risk.get('atr_filter_max', config.ATR_FILTER_MAX))
         print(f"   Risk updated: SL={config.STOP_LOSS_PERCENT}, TP={config.TAKE_PROFIT_PERCENT}, Prob={config.PROB_THRESHOLD}")
 
     if 'model' in params:
@@ -260,6 +263,15 @@ def run_backtest_job(job_id, params):
         avg_win = sum(t['pips'] for t in winning_trades) / len(winning_trades) if winning_trades else 0
         avg_loss = sum(t['pips'] for t in losing_trades) / len(losing_trades) if losing_trades else 0
         
+        # Calculate Profit Factor
+        gross_profit = sum(t['pips'] for t in winning_trades)
+        gross_loss = abs(sum(t['pips'] for t in losing_trades))
+        
+        if gross_loss > 0:
+            profit_factor = gross_profit / gross_loss
+        else:
+            profit_factor = float('inf') if gross_profit > 0 else 0.0
+        
         # Calculate money metrics
         # We need a conversion factor: how much is 1 pip worth in $?
         # For simplicity, if balance is 10k, let's assume 1 pip (0.1 gold points) = $1 (approx 0.1 lot)
@@ -282,11 +294,26 @@ def run_backtest_job(job_id, params):
         
         total_profit_money = 0
         
+        # Max Drawdown tracking
+        peak_balance = initial_balance
+        max_drawdown_amount = 0.0
+        max_drawdown_percent = 0.0
+        
         for trade in sorted(closed_trades, key=lambda x: x['timestamp']):
             if trade['pips'] is not None:
                 profit_money = trade['pips'] * pip_value
                 current_balance += profit_money
                 total_profit_money += profit_money
+                
+                # Drawdown Calculation
+                if current_balance > peak_balance:
+                    peak_balance = current_balance
+                else:
+                    drawdown = peak_balance - current_balance
+                    max_drawdown_amount = max(max_drawdown_amount, drawdown)
+                    if peak_balance > 0:
+                        dd_percent = (drawdown / peak_balance) * 100
+                        max_drawdown_percent = max(max_drawdown_percent, dd_percent)
                 
                 ts = trade['timestamp']
                 month_key = ts.strftime('%Y-%m') if hasattr(ts, 'strftime') else str(ts)[:7]
@@ -326,9 +353,12 @@ def run_backtest_job(job_id, params):
                 'win_rate': round(win_rate, 2),
                 'avg_win': round(avg_win, 2),
                 'avg_loss': round(avg_loss, 2),
+                'profit_factor': round(profit_factor, 2) if profit_factor != float('inf') else 999.99,
                 'avg_win_money': round(avg_win_money, 2),
                 'avg_loss_money': round(avg_loss_money, 2),
                 'period_days': config.BACKTEST_PERIOD_DAYS,
+                'max_drawdown_amount': round(max_drawdown_amount, 2),
+                'max_drawdown_percent': round(max_drawdown_percent, 2)
 
             },
             'equity_curve': equity_curve,
@@ -377,7 +407,10 @@ def get_config():
             'take_profit_percent': config.TAKE_PROFIT_PERCENT,
             'prob_threshold': config.PROB_THRESHOLD,
             'use_atr_stops': config.USE_ATR_STOPS,
-            'use_trend_filter': config.USE_TREND_FILTER
+            'use_trend_filter': config.USE_TREND_FILTER,
+            'use_volatility_filter': config.USE_VOLATILITY_FILTER,
+            'atr_filter_min': config.ATR_FILTER_MIN,
+            'atr_filter_max': config.ATR_FILTER_MAX
         },
         'model': {
             'n_estimators': config.N_ESTIMATORS,

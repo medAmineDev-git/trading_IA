@@ -16,6 +16,9 @@ export interface TrainingParams {
     prob_threshold: number;
     use_atr_stops: boolean;
     use_trend_filter: boolean;
+    use_volatility_filter: boolean;
+    atr_filter_min: number;
+    atr_filter_max: number;
   };
   model: {
     model_type: "xgboost" | "lightgbm" | "rf" | "ensemble";
@@ -81,6 +84,8 @@ export interface BacktestMetrics {
   avg_loss_money?: number;
   profit_factor: number;
   period_days?: number;
+  max_drawdown_percent?: number;
+  max_drawdown_amount?: number;
 }
 
 export interface EquityPoint {
@@ -120,6 +125,9 @@ export interface Config {
     prob_threshold: number;
     use_atr_stops: boolean;
     use_trend_filter: boolean;
+    use_volatility_filter: boolean;
+    atr_filter_min: number;
+    atr_filter_max: number;
   };
   model: {
     model_type: "xgboost" | "lightgbm" | "rf" | "ensemble";

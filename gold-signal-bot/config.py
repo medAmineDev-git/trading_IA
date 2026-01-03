@@ -41,6 +41,9 @@ USE_ATR_STOPS = False          # Disabled: ATR too volatile at high gold prices
 ATR_STOP_MULTIPLIER = 2.0      # Stop Loss = 2 × ATR
 ATR_TP_MULTIPLIER = 5.0       # Take Profit = 5 × ATR
 USE_TREND_FILTER = False       # Disabled: allow counter-trend trades
+USE_VOLATILITY_FILTER = False  # Disabled by default
+ATR_FILTER_MIN = 5.0           # Minimum ATR to trade (avoid chop)
+ATR_FILTER_MAX = 50.0          # Maximum ATR to trade (avoid news spikes)
 RSI_BUY_MIN = 30               # Require RSI > 30 for BUY (more lenient)
 RSI_SELL_MAX = 70              # Require RSI < 70 for SELL (more lenient)
 MIN_RR = 1.8                   # Minimum risk-reward ratio to accept

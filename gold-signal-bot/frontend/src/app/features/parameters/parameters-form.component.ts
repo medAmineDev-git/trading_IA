@@ -76,6 +76,14 @@ export class ParametersFormComponent implements OnInit {
     return this.parametersForm.get("prob_threshold")!;
   }
 
+  get atr_filter_min() {
+    return this.parametersForm.get("atr_filter_min")!;
+  }
+
+  get atr_filter_max() {
+    return this.parametersForm.get("atr_filter_max")!;
+  }
+
   constructor(private fb: FormBuilder, private apiService: ApiService) {}
 
   ngOnInit() {
@@ -147,6 +155,9 @@ export class ParametersFormComponent implements OnInit {
       ],
       use_atr_stops: [defaults.risk.use_atr_stops],
       use_trend_filter: [defaults.risk.use_trend_filter],
+      use_volatility_filter: [defaults.risk.use_volatility_filter],
+      atr_filter_min: [defaults.risk.atr_filter_min],
+      atr_filter_max: [defaults.risk.atr_filter_max],
 
       // Model Hyperparameters
       model_type: [defaults.model.model_type || "xgboost", Validators.required],
@@ -204,6 +215,9 @@ export class ParametersFormComponent implements OnInit {
         prob_threshold: formValue.prob_threshold,
         use_atr_stops: formValue.use_atr_stops,
         use_trend_filter: formValue.use_trend_filter,
+        use_volatility_filter: formValue.use_volatility_filter,
+        atr_filter_min: formValue.atr_filter_min,
+        atr_filter_max: formValue.atr_filter_max,
       },
       model: {
         model_type: formValue.model_type,
@@ -243,6 +257,9 @@ export class ParametersFormComponent implements OnInit {
         prob_threshold: 0.5,
         use_atr_stops: false,
         use_trend_filter: false,
+        use_volatility_filter: false,
+        atr_filter_min: 5,
+        atr_filter_max: 50,
       },
       model: {
         model_type: "xgboost",

@@ -141,6 +141,7 @@ class GoldBacktester:
         prev_prediction = None
         confidence_rejects = 0
         macd_rejects = 0
+        volatility_rejects = 0
         signals_generated = 0
         
         print(f"\n🎯 Generating signals...")
@@ -166,8 +167,21 @@ class GoldBacktester:
             rsi_val = float(latest_row['RSI'])
             atr_val = float(latest_row['ATR'])
             ema_slow = float(latest_row['EMA_Slow'])
+
+            # --- REGIME FILTERS ---
             
-            # Trend filter: only trade with EMA200 trend
+            # 1. Volatility Filter (ATR)
+            if getattr(config, 'USE_VOLATILITY_FILTER', False):
+                min_atr = getattr(config, 'ATR_FILTER_MIN', 0)
+                max_atr = getattr(config, 'ATR_FILTER_MAX', 999999)
+                
+                # Check if current ATR is outside allowed range
+                if atr_val < min_atr or atr_val > max_atr:
+                    volatility_rejects += 1
+                    self._check_trade_exits(current_price, idx)
+                    continue
+
+            # 2. Trend filter: only trade with EMA200 trend
             use_trend_filter = getattr(config, 'USE_TREND_FILTER', False)
             trend_ok_buy = (current_price > ema_slow) if use_trend_filter else True
             trend_ok_sell = (current_price < ema_slow) if use_trend_filter else True
@@ -243,7 +257,7 @@ class GoldBacktester:
             # Check if any open trades hit SL or TP
             self._check_trade_exits(current_price, idx)
         
-        self._print_results(signals_generated, confidence_rejects, macd_rejects)
+        self._print_results(signals_generated, confidence_rejects, macd_rejects, volatility_rejects)
     
     def _check_trade_exits(self, current_price, idx):
         """Check if open trades hit SL or TP"""
@@ -287,13 +301,13 @@ class GoldBacktester:
                         trade['pips'] = (trade['entry_price'] - trade['tp']) * 10
                         trade['status'] = 'Closed'
     
-    def _print_results(self, signals_generated, confidence_rejects, macd_rejects):
+    def _print_results(self, signals_generated, confidence_rejects, macd_rejects, volatility_rejects=0):
         """Print backtest results with monthly breakdown"""
         lines = []
         lines.append("\n" + "="*70)
         lines.append("BACKTEST RESULTS - GOLD SIGNAL BOT")
         lines.append("="*70)
-        lines.append(f"\nFilter stats: signals={signals_generated}, confidence rejects={confidence_rejects}, macd/rsi rejects={macd_rejects}")
+        lines.append(f"\nFilter stats: signals={signals_generated}, confidence rejects={confidence_rejects}, macd/rsi rejects={macd_rejects}, volatility rejects={volatility_rejects}")
         
         if not self.trades:
             lines.append("❌ No trades generated during backtest period")

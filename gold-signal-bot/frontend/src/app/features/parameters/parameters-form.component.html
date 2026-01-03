@@ -199,6 +199,41 @@
             >
               Use Trend Filter (EMA)
             </mat-slide-toggle>
+            <mat-slide-toggle
+              formControlName="use_volatility_filter"
+              class="white-text-toggle"
+            >
+              Use Volatility Filter (ATR)
+            </mat-slide-toggle>
+          </div>
+
+          <!-- Volatility Settings (only if enabled) -->
+          <div
+            class="slider-group full-width-col"
+            *ngIf="parametersForm.get('use_volatility_filter')?.value"
+          >
+            <div class="label-row">
+              <label>ATR Filter Range (Min - Max)</label>
+              <mat-icon
+                class="info-icon"
+                matTooltip="Skip trades if volatility is too low (chop) or too high (news)"
+                >help</mat-icon
+              >
+            </div>
+            <div class="grid cols-2" style="gap: 16px">
+              <div class="slider-subgroup">
+                <span class="small-label">Min: {{ atr_filter_min.value }}</span>
+                <mat-slider min="1" max="50" step="1" showTickMarks>
+                  <input matSliderThumb formControlName="atr_filter_min" />
+                </mat-slider>
+              </div>
+              <div class="slider-subgroup">
+                <span class="small-label">Max: {{ atr_filter_max.value }}</span>
+                <mat-slider min="10" max="200" step="5" showTickMarks>
+                  <input matSliderThumb formControlName="atr_filter_max" />
+                </mat-slider>
+              </div>
+            </div>
           </div>
         </div>
       </mat-card-content>
