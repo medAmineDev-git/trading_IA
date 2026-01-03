@@ -183,8 +183,9 @@ def run_backtest_job(job_id, params):
         # Update config if needed
         sync_config(params)
         
+        initial_balance = float(params.get('initial_capital', 10000))
         if 'period_days' in params:
-            config.BACKTEST_PERIOD_DAYS = params['period_days']
+            config.BACKTEST_PERIOD_DAYS = int(params['period_days'])
         
         update_job_status(job_id, JobStatus.RUNNING, 30, 'Loading model and data...')
         
@@ -232,20 +233,63 @@ def run_backtest_job(job_id, params):
         avg_win = sum(t['pips'] for t in winning_trades) / len(winning_trades) if winning_trades else 0
         avg_loss = sum(t['pips'] for t in losing_trades) / len(losing_trades) if losing_trades else 0
         
-        # Calculate equity curve
+        # Calculate money metrics
+        # We need a conversion factor: how much is 1 pip worth in $?
+        # For simplicity, if balance is 10k, let's assume 1 pip (0.1 gold points) = $1 (approx 0.1 lot)
+        # This keeps the scale realistic.
+        pip_value = initial_balance / 10000.0 
+        
+        avg_win_money = sum(t['pips'] * pip_value for t in winning_trades) / len(winning_trades) if winning_trades else 0
+        avg_loss_money = sum(t['pips'] * pip_value for t in losing_trades) / len(losing_trades) if losing_trades else 0
+
+        # Calculate equity curve and monthly performance
         equity_curve = []
-        cumulative_pips = 0
+        current_balance = initial_balance
+        equity_curve.append({
+            'timestamp': 'Start',
+            'balance': current_balance,
+            'pips': 0
+        })
+        
+        monthly_profits = {} # month_str -> total_profit_money
+        
+        total_profit_money = 0
+        
         for trade in sorted(closed_trades, key=lambda x: x['timestamp']):
             if trade['pips'] is not None:
-                cumulative_pips += trade['pips']
+                profit_money = trade['pips'] * pip_value
+                current_balance += profit_money
+                total_profit_money += profit_money
+                
+                ts = trade['timestamp']
+                month_key = ts.strftime('%Y-%m') if hasattr(ts, 'strftime') else str(ts)[:7]
+                monthly_profits[month_key] = monthly_profits.get(month_key, 0) + profit_money
+                
                 equity_curve.append({
                     'timestamp': trade['timestamp'].isoformat() if hasattr(trade['timestamp'], 'isoformat') else str(trade['timestamp']),
-                    'pips': cumulative_pips
+                    'balance': round(current_balance, 2),
+                    'pips': round(total_pips, 2) # Not strictly used for the main chart anymore
                 })
         
+        # Convert monthly profits to percentages
+        monthly_perf = []
+        for month in sorted(monthly_profits.keys()):
+            # Calculate % based on balance at START of that month might be complex here
+            # For simplicity, % of initial balance or rolling balance?
+            # Let's do % of initial balance for now or a simple monthly $ gain
+            percent_gain = (monthly_profits[month] / initial_balance) * 100
+            monthly_perf.append({
+                'month': month,
+                'percent': round(percent_gain, 2),
+                'profit': round(monthly_profits[month], 2)
+            })
+            
         result = {
             'trades': trades_data,
             'metrics': {
+                'initial_balance': initial_balance,
+                'final_balance': round(current_balance, 2),
+                'total_profit_money': round(total_profit_money, 2),
                 'total_pips': round(total_pips, 2),
                 'total_trades': len(backtester.trades),
                 'closed_trades': len(closed_trades),
@@ -255,9 +299,12 @@ def run_backtest_job(job_id, params):
                 'win_rate': round(win_rate, 2),
                 'avg_win': round(avg_win, 2),
                 'avg_loss': round(avg_loss, 2),
+                'avg_win_money': round(avg_win_money, 2),
+                'avg_loss_money': round(avg_loss_money, 2),
                 'profit_factor': round(abs(avg_win / avg_loss), 2) if avg_loss != 0 else 0
             },
             'equity_curve': equity_curve,
+            'monthly_performance': monthly_perf,
             'output': output_buffer.getvalue(),
             'timestamp': datetime.now().isoformat()
         }
