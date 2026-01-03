@@ -4,6 +4,9 @@ import {
   OnChanges,
   SimpleChanges,
   ViewChild,
+  ViewChildren,
+  QueryList,
+  ChangeDetectorRef,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { MatCardModule } from "@angular/material/card";
@@ -32,7 +35,9 @@ import { BacktestResults, Trade } from "../../core/models/models";
 })
 export class ResultsDashboardComponent implements OnChanges {
   @Input() results: BacktestResults | null = null;
-  @ViewChild(BaseChartDirective) chart?: BaseChartDirective;
+  @ViewChildren(BaseChartDirective) charts?: QueryList<BaseChartDirective>;
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   displayedColumns: string[] = [
     "timestamp",
@@ -78,11 +83,11 @@ export class ResultsDashboardComponent implements OnChanges {
       x: {
         type: "time",
         time: { unit: "day" },
-        grid: { color: "rgba(255, 255, 255, 0.05)" },
+        grid: { color: "rgba(255, 255, 255, 0.05)", z: -10 },
         ticks: { color: "rgba(255, 255, 255, 0.5)" },
       },
       y: {
-        grid: { color: "rgba(255, 255, 255, 0.05)" },
+        grid: { color: "rgba(255, 255, 255, 0.05)", z: -10 },
         ticks: {
           color: "rgba(255, 255, 255, 0.5)",
           callback: (val) => val + "%",
@@ -117,7 +122,7 @@ export class ResultsDashboardComponent implements OnChanges {
     },
     scales: {
       y: {
-        grid: { color: "rgba(255, 255, 255, 0.05)" },
+        grid: { color: "rgba(255, 255, 255, 0.05)", z: -10 },
         ticks: {
           color: "rgba(255, 255, 255, 0.5)",
           callback: (val) => val + "%",
@@ -126,6 +131,47 @@ export class ResultsDashboardComponent implements OnChanges {
       x: {
         grid: { display: false },
         ticks: { color: "rgba(255, 255, 255, 0.5)" },
+      },
+    },
+  };
+
+  drawdownChartData: ChartConfiguration["data"] = {
+    datasets: [],
+  };
+
+  drawdownChartOptions: ChartConfiguration["options"] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: "Daily Drawdown (%)",
+        color: "rgba(255, 255, 255, 0.9)",
+        font: { size: 16, weight: "bold" },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const val = context.parsed.y;
+            return `Drawdown: ${val}%`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        type: "time",
+        time: { unit: "day" },
+        grid: { color: "rgba(255, 255, 255, 0.05)", z: -10 },
+        ticks: { color: "rgba(255, 255, 255, 0.5)" },
+      },
+      y: {
+        grid: { color: "rgba(255, 255, 255, 0.05)", z: -10 },
+        ticks: {
+          color: "rgba(255, 255, 255, 0.5)",
+          callback: (val) => val + "%",
+        },
       },
     },
   };
@@ -139,57 +185,144 @@ export class ResultsDashboardComponent implements OnChanges {
   updateChartData() {
     if (!this.results) return;
 
-    // Equity Percentage Chart
-    const initialBalance = this.results.metrics.initial_balance || 10000;
-    const labels = this.results.equity_curve.map((point) =>
-      point.timestamp === "Start"
-        ? new Date(this.results!.trades[0]?.timestamp || Date.now())
-        : new Date(point.timestamp)
-    );
-    const data = this.results.equity_curve.map((point) => {
-      const balance = point.balance || initialBalance;
-      const percentGain = ((balance - initialBalance) / initialBalance) * 100;
-      return Number(percentGain.toFixed(2));
-    });
+    // Use setTimeout to ensure charts are rendered for gradient context creation
+    setTimeout(() => {
+      // --- Equity Percentage Chart ---
+      const initialBalance = this.results?.metrics.initial_balance || 10000;
+      const labels: Date[] = [];
+      const data: number[] = [];
 
-    this.equityChartData = {
-      labels,
-      datasets: [
-        {
-          label: "Equity Growth (%)",
-          data,
-          borderColor: "#9262f9",
-          backgroundColor: "rgba(146, 98, 249, 0.1)",
-          fill: true,
-          tension: 0.4,
-          pointRadius: labels.length > 50 ? 0 : 3,
-        },
-      ],
-    };
+      this.results?.equity_curve.forEach((point) => {
+        let dateVal: Date;
+        if (point.timestamp === "Start") {
+          dateVal = new Date(this.results!.trades[0]?.timestamp || Date.now());
+        } else {
+          dateVal = new Date(point.timestamp);
+        }
+        if (!isNaN(dateVal.getTime())) {
+          labels.push(dateVal);
+          const balance = point.balance || initialBalance;
+          const percentGain =
+            ((balance - initialBalance) / initialBalance) * 100;
+          data.push(Number(percentGain.toFixed(2)));
+        }
+      });
 
-    // Monthly Performance Chart
-    if (this.results.monthly_performance) {
-      this.monthlyChartData = {
-        labels: this.results.monthly_performance.map((m) => m.month),
+      // Equity Gradient
+      let equityBg: string | CanvasGradient = "rgba(146, 98, 249, 0.5)";
+      if (this.charts) {
+        const chart = this.charts.find(
+          (c) =>
+            c.chart?.config.data.datasets?.[0]?.label?.includes("Equity") ??
+            false
+        );
+        if (chart && chart.chart?.ctx) {
+          const ctx = chart.chart.ctx;
+          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+          gradient.addColorStop(0, "rgba(146, 98, 249, 0.85)");
+          gradient.addColorStop(1, "rgba(146, 98, 249, 0.05)");
+          equityBg = gradient;
+        }
+      }
+
+      this.equityChartData = {
+        labels,
         datasets: [
           {
-            label: "Monthly %",
-            data: this.results.monthly_performance.map((m) => m.percent),
-            backgroundColor: this.results.monthly_performance.map((m) =>
-              m.percent >= 0
-                ? "rgba(76, 175, 80, 0.6)"
-                : "rgba(244, 67, 54, 0.6)"
-            ),
-            borderColor: this.results.monthly_performance.map((m) =>
-              m.percent >= 0 ? "#4caf50" : "#f44336"
-            ),
-            borderWidth: 1,
+            label: "Equity Growth (%)",
+            data,
+            borderColor: "#9262f9",
+            borderWidth: 4,
+            backgroundColor: equityBg,
+            fill: true,
+            tension: 0.4,
+            pointRadius: labels.length > 50 ? 0 : 3,
           },
         ],
       };
-    }
 
-    this.chart?.update();
+      // --- Monthly Performance Chart ---
+      if (this.results?.monthly_performance) {
+        this.monthlyChartData = {
+          labels: this.results.monthly_performance.map((m) => m.month),
+          datasets: [
+            {
+              label: "Monthly %",
+              data: this.results.monthly_performance.map((m) => m.percent),
+              backgroundColor: this.results.monthly_performance.map((m) =>
+                m.percent >= 0
+                  ? "rgba(76, 175, 80, 1.0)"
+                  : "rgba(244, 67, 54, 1.0)"
+              ),
+              borderColor: this.results.monthly_performance.map((m) =>
+                m.percent >= 0 ? "#4caf50" : "#f44336"
+              ),
+              borderWidth: 1,
+            },
+          ],
+        };
+      }
+
+      // --- Daily Drawdown Chart (Line Style) ---
+      if (this.results?.drawdown_curve) {
+        const ddLabels: Date[] = [];
+        const ddData: number[] = [];
+
+        this.results.drawdown_curve.forEach((point: any) => {
+          let dateVal: Date;
+          if (point.timestamp === "Start") {
+            dateVal = new Date(
+              this.results!.trades[0]?.timestamp || Date.now()
+            );
+          } else {
+            dateVal = new Date(point.timestamp);
+          }
+          if (!isNaN(dateVal.getTime())) {
+            ddLabels.push(dateVal);
+            ddData.push(point.drawdown);
+          }
+        });
+
+        // Drawdown Gradient (Red)
+        let ddBg: string | CanvasGradient = "rgba(244, 67, 54, 0.5)";
+        if (this.charts) {
+          // Try to find the drawdown chart, or just create generic gradient if context allows
+          // Since we are inside a timeout, contexts should exist if elements exist.
+          // We will try to grab the FIRST chart context available just to create a gradient,
+          // or specifically look for one.
+          const chart = this.charts.first;
+          if (chart && chart.chart?.ctx) {
+            const ctx = chart.chart.ctx; // Use any valid context to create gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, "rgba(244, 67, 54, 0.85)");
+            gradient.addColorStop(1, "rgba(244, 67, 54, 0.05)");
+            ddBg = gradient;
+          }
+        }
+
+        this.drawdownChartData = {
+          labels: ddLabels,
+          datasets: [
+            {
+              label: "Drawdown (%)",
+              data: ddData,
+              borderColor: "#f44336",
+              borderWidth: 4,
+              backgroundColor: ddBg, // Red gradient
+              fill: true,
+              tension: 0.4,
+              pointRadius: ddLabels.length > 50 ? 0 : 3,
+            },
+          ],
+        };
+      }
+
+      // Final Update
+      this.cdr.detectChanges();
+      if (this.charts) {
+        this.charts.forEach((c) => c.update());
+      }
+    }, 100);
   }
 
   copyReport() {

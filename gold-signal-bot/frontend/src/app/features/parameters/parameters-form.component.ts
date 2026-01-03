@@ -143,11 +143,11 @@ export class ParametersFormComponent implements OnInit {
       // Risk Management
       stop_loss_percent: [
         defaults.risk.stop_loss_percent * 100,
-        [Validators.required, Validators.min(0.1), Validators.max(5)],
+        [Validators.required, Validators.min(0.01), Validators.max(5)],
       ],
       take_profit_percent: [
         defaults.risk.take_profit_percent * 100,
-        [Validators.required, Validators.min(0.1), Validators.max(10)],
+        [Validators.required, Validators.min(0.01), Validators.max(10)],
       ],
       prob_threshold: [
         defaults.risk.prob_threshold,

@@ -281,8 +281,8 @@ def run_backtest_job(job_id, params):
         avg_win_money = sum(t['pips'] * pip_value for t in winning_trades) / len(winning_trades) if winning_trades else 0
         avg_loss_money = sum(t['pips'] * pip_value for t in losing_trades) / len(losing_trades) if losing_trades else 0
 
-        # Calculate equity curve and monthly performance
         equity_curve = []
+        drawdown_curve = [] # NEW: Track drawdown over time
         current_balance = initial_balance
         equity_curve.append({
             'timestamp': 'Start',
@@ -306,6 +306,7 @@ def run_backtest_job(job_id, params):
                 total_profit_money += profit_money
                 
                 # Drawdown Calculation
+                dd_percent = 0.0
                 if current_balance > peak_balance:
                     peak_balance = current_balance
                 else:
@@ -323,6 +324,11 @@ def run_backtest_job(job_id, params):
                     'timestamp': trade['timestamp'].isoformat() if hasattr(trade['timestamp'], 'isoformat') else str(trade['timestamp']),
                     'balance': round(current_balance, 2),
                     'pips': round(total_pips, 2) # Not strictly used for the main chart anymore
+                })
+                
+                drawdown_curve.append({
+                    'timestamp': trade['timestamp'].isoformat() if hasattr(trade['timestamp'], 'isoformat') else str(trade['timestamp']),
+                    'drawdown': round(dd_percent, 2)
                 })
         
         # Convert monthly profits to percentages
@@ -362,6 +368,7 @@ def run_backtest_job(job_id, params):
 
             },
             'equity_curve': equity_curve,
+            'drawdown_curve': drawdown_curve,
             'monthly_performance': monthly_perf,
             'output': output_buffer.getvalue(),
             'timestamp': datetime.now().isoformat()

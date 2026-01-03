@@ -103,6 +103,10 @@ export interface BacktestResults {
     percent: number;
     profit: number;
   }[];
+  drawdown_curve?: {
+    timestamp: string;
+    drawdown: number;
+  }[];
   output: string;
   timestamp: string;
 }

@@ -194,6 +194,24 @@
             </div>
           </mat-card-content>
         </mat-card>
+
+        <!-- Drawdown Chart (Line Style) -->
+        <mat-card class="glass-panel chart-card" *ngIf="results.drawdown_curve">
+          <mat-card-header>
+            <mat-card-title>Daily Drawdown (%)</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="chart-container">
+              <canvas
+                baseChart
+                [data]="drawdownChartData"
+                [options]="drawdownChartOptions"
+                type="line"
+              >
+              </canvas>
+            </div>
+          </mat-card-content>
+        </mat-card>
       </div>
     </mat-tab>
 
