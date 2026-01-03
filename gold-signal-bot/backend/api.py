@@ -236,21 +236,8 @@ def run_backtest_job(job_id, params):
         update_job_status(job_id, JobStatus.RUNNING, 90, 'Processing results...')
         
         # Extract results
-        trades_data = []
-        for trade in backtester.trades:
-            trades_data.append({
-                'timestamp': trade['timestamp'].isoformat() if hasattr(trade['timestamp'], 'isoformat') else str(trade['timestamp']),
-                'type': trade['type'],
-                'entry_price': float(trade['entry_price']),
-                'sl': float(trade['sl']),
-                'tp': float(trade['tp']),
-                'close_price': float(trade['close_price']) if trade['close_price'] else None,
-                'close_timestamp': trade['close_timestamp'].isoformat() if trade['close_timestamp'] and hasattr(trade['close_timestamp'], 'isoformat') else str(trade['close_timestamp']) if trade['close_timestamp'] else None,
-                'close_reason': trade['close_reason'],
-                'pips': float(trade['pips']) if trade['pips'] else None,
-                'status': trade['status'],
-                'confidence': float(trade['confidence'])
-            })
+        # Prepare for processing
+        pip_value = initial_balance / 10000.0 
         
         # Calculate metrics
         closed_trades = [t for t in backtester.trades if t['status'] == 'Closed']
@@ -272,12 +259,6 @@ def run_backtest_job(job_id, params):
         else:
             profit_factor = float('inf') if gross_profit > 0 else 0.0
         
-        # Calculate money metrics
-        # We need a conversion factor: how much is 1 pip worth in $?
-        # For simplicity, if balance is 10k, let's assume 1 pip (0.1 gold points) = $1 (approx 0.1 lot)
-        # This keeps the scale realistic.
-        pip_value = initial_balance / 10000.0 
-        
         avg_win_money = sum(t['pips'] * pip_value for t in winning_trades) / len(winning_trades) if winning_trades else 0
         avg_loss_money = sum(t['pips'] * pip_value for t in losing_trades) / len(losing_trades) if losing_trades else 0
 
@@ -293,17 +274,27 @@ def run_backtest_job(job_id, params):
         monthly_profits = {} # month_str -> total_profit_money
         
         total_profit_money = 0
+        cumulative_pips = 0
         
         # Max Drawdown tracking
         peak_balance = initial_balance
         max_drawdown_amount = 0.0
         max_drawdown_percent = 0.0
         
-        for trade in sorted(closed_trades, key=lambda x: x['timestamp']):
+        
+        # Calculate daily returns for Max Daily Drawdown
+        daily_closing_balances = {}
+        
+        # Helper to get the best timestamp for P&L tracking (Closing time)
+        def get_pl_timestamp(t):
+            return t.get('close_timestamp') or t['timestamp']
+
+        for trade in sorted(closed_trades, key=get_pl_timestamp):
             if trade['pips'] is not None:
                 profit_money = trade['pips'] * pip_value
                 current_balance += profit_money
                 total_profit_money += profit_money
+                cumulative_pips += trade['pips']
                 
                 # Drawdown Calculation
                 dd_percent = 0.0
@@ -316,27 +307,80 @@ def run_backtest_job(job_id, params):
                         dd_percent = (drawdown / peak_balance) * 100
                         max_drawdown_percent = max(max_drawdown_percent, dd_percent)
                 
-                ts = trade['timestamp']
+                ts = get_pl_timestamp(trade)
+                
+                # Update daily closing balance (latest trade on that day wins)
+                daily_closing_balances[ts.date()] = current_balance
+
                 month_key = ts.strftime('%Y-%m') if hasattr(ts, 'strftime') else str(ts)[:7]
                 monthly_profits[month_key] = monthly_profits.get(month_key, 0) + profit_money
                 
                 equity_curve.append({
-                    'timestamp': trade['timestamp'].isoformat() if hasattr(trade['timestamp'], 'isoformat') else str(trade['timestamp']),
+                    'timestamp': ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
                     'balance': round(current_balance, 2),
-                    'pips': round(total_pips, 2) # Not strictly used for the main chart anymore
+                    'pips': round(cumulative_pips, 2) 
                 })
                 
                 drawdown_curve.append({
-                    'timestamp': trade['timestamp'].isoformat() if hasattr(trade['timestamp'], 'isoformat') else str(trade['timestamp']),
+                    'timestamp': ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
                     'drawdown': round(dd_percent, 2)
                 })
+                
+                # Update the trade record in trades_data with the calculated profit_money
+                trade['profit_money'] = round(profit_money, 2)
+
+        # Calculate Daily Performance (Profit, Count, Percent)
+        daily_perf_data = {}
+        sorted_days = sorted(daily_closing_balances.keys())
+        prev_running_balance = initial_balance
         
+        for day in sorted_days:
+            close_bal = daily_closing_balances[day]
+            profit_today = close_bal - prev_running_balance
+            
+            # Use INITIAL BALANCE as divisor for Daily ROI (to match user expectations)
+            # If he prefers compounded, it would be divided by prev_running_balance
+            percent_today = (profit_today / initial_balance) * 100
+            
+            # Count trades for this day based on get_pl_timestamp
+            trades_today = [t for t in closed_trades if get_pl_timestamp(t).date() == day]
+            
+            daily_perf_data[day.isoformat()] = {
+                'profit': round(profit_today, 2),
+                'percent': round(percent_today, 2),
+                'count': len(trades_today)
+            }
+            prev_running_balance = close_bal
+
+        # Build final trades data for response (now that profit_money is calculated)
+        trades_data = []
+        for trade in backtester.trades:
+            # Use same timestamp logic for status consistency if possible
+            close_ts = trade.get('close_timestamp')
+            trades_data.append({
+                'timestamp': trade['timestamp'].isoformat() if hasattr(trade['timestamp'], 'isoformat') else str(trade['timestamp']),
+                'type': trade['type'],
+                'entry_price': float(trade['entry_price']),
+                'sl': float(trade['sl']),
+                'tp': float(trade['tp']),
+                'close_price': float(trade['close_price']) if trade['close_price'] else None,
+                'close_timestamp': close_ts.isoformat() if close_ts and hasattr(close_ts, 'isoformat') else str(close_ts) if close_ts else None,
+                'close_reason': trade['close_reason'],
+                'pips': float(trade['pips']) if trade['pips'] else None,
+                'profit_money': float(trade['profit_money']) if 'profit_money' in trade else 0.0,
+                'status': trade['status'],
+                'confidence': float(trade['confidence'])
+            })
+
+        # Calculate Max Daily Drawdown (Worst Daily Return %)
+        worst_daily_return_percent = 0.0
+        for day_data in daily_perf_data.values():
+            if day_data['percent'] < worst_daily_return_percent:
+                worst_daily_return_percent = day_data['percent']
+
         # Convert monthly profits to percentages
         monthly_perf = []
         for month in sorted(monthly_profits.keys()):
-            # Calculate % based on balance at START of that month might be complex here
-            # For simplicity, % of initial balance or rolling balance?
-            # Let's do % of initial balance for now or a simple monthly $ gain
             percent_gain = (monthly_profits[month] / initial_balance) * 100
             monthly_perf.append({
                 'month': month,
@@ -364,12 +408,13 @@ def run_backtest_job(job_id, params):
                 'avg_loss_money': round(avg_loss_money, 2),
                 'period_days': config.BACKTEST_PERIOD_DAYS,
                 'max_drawdown_amount': round(max_drawdown_amount, 2),
-                'max_drawdown_percent': round(max_drawdown_percent, 2)
-
+                'max_drawdown_percent': round(max_drawdown_percent, 2),
+                'max_daily_drawdown_percent': round(worst_daily_return_percent, 2)
             },
             'equity_curve': equity_curve,
             'drawdown_curve': drawdown_curve,
             'monthly_performance': monthly_perf,
+            'daily_performance': daily_perf_data,
             'output': output_buffer.getvalue(),
             'timestamp': datetime.now().isoformat()
         }

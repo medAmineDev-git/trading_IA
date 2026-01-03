@@ -36,7 +36,14 @@
       <div class="metric-value negative">
         {{ results.metrics.max_drawdown_percent }}%
       </div>
-      <div class="metric-label">Max Drawdown</div>
+      <div class="metric-label">Overall Max Drawdown</div>
+    </mat-card>
+
+    <mat-card class="metric-card">
+      <div class="metric-value negative">
+        {{ results.metrics.max_daily_drawdown_percent }}%
+      </div>
+      <div class="metric-label">Max Daily Drawdown</div>
     </mat-card>
 
     <mat-card class="metric-card">
@@ -212,6 +219,13 @@
             </div>
           </mat-card-content>
         </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Calendar Tab -->
+    <mat-tab label="Trades Calendar">
+      <div class="tab-content">
+        <app-trades-calendar [results]="results"></app-trades-calendar>
       </div>
     </mat-tab>
 

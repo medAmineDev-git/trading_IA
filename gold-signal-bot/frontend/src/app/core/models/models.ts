@@ -63,6 +63,7 @@ export interface Trade {
   close_timestamp: string | null;
   close_reason: string | null;
   pips: number | null;
+  profit_money?: number;
   status: "Open" | "Closed";
   confidence: number;
 }
@@ -86,6 +87,7 @@ export interface BacktestMetrics {
   period_days?: number;
   max_drawdown_percent?: number;
   max_drawdown_amount?: number;
+  max_daily_drawdown_percent?: number;
 }
 
 export interface EquityPoint {
@@ -103,6 +105,13 @@ export interface BacktestResults {
     percent: number;
     profit: number;
   }[];
+  daily_performance?: {
+    [date: string]: {
+      profit: number;
+      percent: number;
+      count: number;
+    };
+  };
   drawdown_curve?: {
     timestamp: string;
     drawdown: number;

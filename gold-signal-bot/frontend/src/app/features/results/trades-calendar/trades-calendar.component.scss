@@ -1,0 +1,212 @@
+.calendar-container {
+    padding: 24px;
+    background: transparent;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 24px;
+
+    h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 500;
+        color: white;
+        min-width: 200px;
+        text-align: center;
+    }
+
+    button {
+        color: rgba(255, 255, 255, 0.7);
+        &:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+    }
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    
+    // Fixed height for consistency, or auto
+    // Using auto-rows to maintain square-ish aspect ratio or fixed height
+    // min-height: 500px; 
+}
+
+.weekday-header {
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 8px;
+}
+
+.calendar-day {
+    position: relative;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    min-height: 100px; // Ensure there's enough space for content
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+
+    &:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    &.padding-day {
+        background: transparent;
+        border: none;
+    }
+
+    &.positive-day {
+        background: rgba(76, 175, 80, 0.15);
+        border-color: rgba(76, 175, 80, 0.3);
+        
+        .percent-val {
+            color: #4caf50;
+        }
+    }
+
+    &.negative-day {
+        background: rgba(244, 67, 54, 0.15);
+        border-color: rgba(244, 67, 54, 0.3);
+
+        .percent-val {
+            color: #f44336;
+        }
+    }
+    
+    &.neutral-day {
+        background: rgba(158, 158, 158, 0.1);
+        border-color: rgba(158, 158, 158, 0.2);
+    }
+    &.selected {
+        border-color: #ffd740; // Gold/Accent color
+        box-shadow: 0 0 10px rgba(255, 215, 64, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+    }
+}
+
+.day-number {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.day-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    margin-top: 12px; // Space for the day number
+}
+
+.percent-val {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.trade-count {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+// Trades List Section
+.selected-day-details {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeIn 0.3s ease;
+
+    h3 {
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 16px;
+        font-weight: 400;
+        font-size: 18px;
+    }
+}
+
+.trades-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.trade-item-header {
+    display: grid;
+    grid-template-columns: 100px 80px 100px 100px 1fr;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+}
+
+.trade-item {
+    display: grid;
+    grid-template-columns: 100px 80px 100px 100px 1fr;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.9);
+    align-items: center;
+    font-size: 14px;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+    
+    .buy { color: #4caf50; font-weight: 600; }
+    .sell { color: #f44336; font-weight: 600; }
+    
+    .pips-val {
+        font-weight: 600;
+        &.positive { color: #4caf50; }
+        &.negative { color: #f44336; }
+        
+        small {
+            font-weight: 400;
+            opacity: 0.7;
+            margin-left: 8px;
+            font-size: 12px;
+        }
+    }
+}
+
+.no-trades-msg {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    padding: 16px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

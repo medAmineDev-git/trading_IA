@@ -17,6 +17,7 @@ import { MatButtonModule } from "@angular/material/button";
 import { BaseChartDirective } from "ng2-charts";
 import { ChartConfiguration } from "chart.js";
 import { BacktestResults, Trade } from "../../core/models/models";
+import { TradesCalendarComponent } from "./trades-calendar/trades-calendar.component";
 
 @Component({
   selector: "app-results-dashboard",
@@ -29,6 +30,7 @@ import { BacktestResults, Trade } from "../../core/models/models";
     MatIconModule,
     MatButtonModule,
     BaseChartDirective,
+    TradesCalendarComponent,
   ],
   templateUrl: "./results-dashboard.component.html",
   styleUrls: ["./results-dashboard.component.scss"],

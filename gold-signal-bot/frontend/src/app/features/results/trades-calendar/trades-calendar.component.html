@@ -1,0 +1,84 @@
+<div class="calendar-container">
+  <div class="calendar-header">
+    <button mat-icon-button (click)="prevMonth()">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <h2>{{ currentViewDate | date : "MMMM yyyy" }}</h2>
+    <button mat-icon-button (click)="nextMonth()">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+
+  <div class="calendar-grid">
+    <!-- Weekday Headers -->
+    <div class="weekday-header" *ngFor="let day of weekDays">
+      {{ day }}
+    </div>
+
+    <!-- Days -->
+    <div
+      class="calendar-day"
+      *ngFor="let day of calendarDays"
+      [ngClass]="getDayClass(day)"
+      [class.selected]="selectedDay === day"
+      (click)="selectDay(day)"
+    >
+      <ng-container *ngIf="!day.isPadding">
+        <div class="day-number">{{ day.dayOfMonth }}</div>
+
+        <div
+          class="day-content"
+          *ngIf="day.hasTrade || day.returnPercent !== 0"
+        >
+          <div class="percent-val">
+            {{ day.returnPercent > 0 ? "+" : ""
+            }}{{ day.returnPercent | number : "1.2-2" }}%
+          </div>
+          <div class="trade-count" *ngIf="day.tradeCount > 0">
+            {{ day.tradeCount }} trade{{ day.tradeCount > 1 ? "s" : "" }}
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Selected Day Details -->
+  <div class="selected-day-details" *ngIf="selectedDay">
+    <h3>Trades on {{ selectedDay.date | date : "mediumDate" }}</h3>
+
+    <div
+      class="trades-list"
+      *ngIf="selectedTrades.length > 0; else noTradesOnDay"
+    >
+      <div class="trade-item-header">
+        <span>Time</span>
+        <span>Type</span>
+        <span>Entry</span>
+        <span>Close</span>
+        <span>Pips</span>
+      </div>
+      <div class="trade-item" *ngFor="let trade of selectedTrades">
+        <span>{{ trade.timestamp | date : "shortTime" }}</span>
+        <span
+          [class.buy]="trade.type === 'BUY'"
+          [class.sell]="trade.type === 'SELL'"
+        >
+          {{ trade.type }}
+        </span>
+        <span>{{ trade.entry_price | number : "1.2-2" }}</span>
+        <span>{{ trade.close_price | number : "1.2-2" }}</span>
+        <span
+          [class.positive]="(trade.pips || 0) > 0"
+          [class.negative]="(trade.pips || 0) < 0"
+          class="pips-val"
+        >
+          {{ trade.pips | number : "1.1-1" }} pips
+          <small>({{ trade.profit_money | currency : "USD" }})</small>
+        </span>
+      </div>
+    </div>
+    <ng-template #noTradesOnDay>
+      <p class="no-trades-msg">No trades closed on this day.</p>
+    </ng-template>
+  </div>
+</div>
