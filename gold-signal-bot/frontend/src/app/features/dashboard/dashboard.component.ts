@@ -166,8 +166,62 @@ import { AuthService } from "../../core/services/auth.service";
             mat-align-tabs="center"
             class="custom-tabs"
           >
-            <mat-tab label="Training & Backtest">
+            <mat-tab label="Training Strategy">
               <div class="tab-content">
+                <!-- Strategy Explanation & Quick Actions -->
+                <div class="strategy-info-section mb-24">
+                  <div class="info-content">
+                    <div class="model-info-header">
+                      <div class="model-badge">
+                        <mat-icon>{{
+                          trainingParams?.model?.model_type === "ensemble"
+                            ? "hub"
+                            : "psychology"
+                        }}</mat-icon>
+                        <span>{{
+                          getModelDisplayName(trainingParams?.model?.model_type)
+                        }}</span>
+                      </div>
+                      <h3>
+                        {{
+                          trainingParams?.model?.model_type === "ensemble"
+                            ? "🚀 Elite Voting Ensemble"
+                            : "Selected ML Strategy"
+                        }}
+                      </h3>
+                    </div>
+
+                    <p class="description">
+                      {{
+                        trainingParams?.model?.model_type === "ensemble"
+                          ? "Combining XGBoost, LightGBM, and Random Forest for maximum signal reliability through consensus voting."
+                          : trainingParams?.model?.model_type === "xgboost"
+                          ? "Industry-standard gradient boosting optimized for gold market volatility and complex patterns."
+                          : "Advanced machine learning model configured for high-precision trade entries."
+                      }}
+                    </p>
+
+                    <div class="config-nudge-box glass-panel">
+                      <div class="nudge-text">
+                        <mat-icon color="accent">tips_and_updates</mat-icon>
+                        <p>
+                          We recommend you to change the parameters and models
+                          if you want to optimize results.
+                        </p>
+                      </div>
+                      <button
+                        mat-flat-button
+                        color="accent"
+                        (click)="openParams()"
+                        class="config-btn"
+                      >
+                        <mat-icon>tune</mat-icon>
+                        Configure Parameters
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <app-training-panel
                   [params]="trainingParams"
                   (trainingComplete)="onTrainingComplete()"
@@ -177,57 +231,13 @@ import { AuthService } from "../../core/services/auth.service";
                 <!-- Backtest Display Section - Only shown after training -->
                 <div
                   class="backtest-section"
-                  *ngIf="isModelTrained"
+                  *ngIf="isModelTrained || isEnsembleModelTrained"
                   style="margin-top: 40px;"
                 >
                   <mat-divider style="margin-bottom: 40px;"></mat-divider>
 
                   <app-backtest-panel
                     [params]="trainingParams"
-                    (backtestComplete)="onBacktestComplete($event)"
-                  >
-                  </app-backtest-panel>
-
-                  <!-- Results Display Section -->
-                  <div class="results-container" *ngIf="backtestResults">
-                    <mat-divider style="margin: 24px 0"></mat-divider>
-                    <h3 class="results-title">Backtest Results</h3>
-                    <app-results-dashboard
-                      [results]="backtestResults"
-                    ></app-results-dashboard>
-                  </div>
-                </div>
-              </div>
-            </mat-tab>
-
-            <!-- Multi-model Training Tab -->
-            <mat-tab label="Multi-model Training">
-              <ng-template mat-tab-label>
-                <mat-icon style="margin-right: 8px">hub</mat-icon>
-                Multi-model Ensemble
-              </ng-template>
-              <div class="tab-content">
-                <div class="ensemble-info card mb-16">
-                  <h3>🚀 Elite Voting Ensemble</h3>
-                  <p>
-                    Train RF, XGBoost, and LightGBM simultaneously and combine
-                    their predictions for maximum reliability.
-                  </p>
-                </div>
-                <app-training-panel
-                  [params]="ensembleParams"
-                  (trainingComplete)="onTrainingComplete()"
-                >
-                </app-training-panel>
-
-                <div
-                  class="backtest-section"
-                  *ngIf="isEnsembleModelTrained"
-                  style="margin-top: 40px;"
-                >
-                  <mat-divider style="margin-bottom: 40px;"></mat-divider>
-                  <app-backtest-panel
-                    [params]="ensembleParams"
                     (backtestComplete)="onBacktestComplete($event)"
                   >
                   </app-backtest-panel>
@@ -492,6 +502,83 @@ import { AuthService } from "../../core/services/auth.service";
         margin: 24px 0;
         font-size: 1.5rem;
         color: var(--text-primary);
+      }
+
+      /* Strategy Info Section */
+      .strategy-info-section {
+        padding: 32px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 32px;
+
+        .model-info-header {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 16px;
+
+          h3 {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: 600;
+          }
+        }
+
+        .model-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: var(--text-accent);
+          color: white;
+          padding: 6px 14px;
+          border-radius: 30px;
+          font-size: 0.85rem;
+          font-weight: 600;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+        }
+
+        .description {
+          font-size: 1.05rem;
+          color: var(--text-secondary);
+          line-height: 1.6;
+          margin-bottom: 24px;
+          max-width: 800px;
+        }
+
+        .config-nudge-box {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 20px 24px;
+          background: rgba(146, 98, 249, 0.05);
+          border: 1px dashed rgba(146, 98, 249, 0.3);
+          border-radius: 16px;
+
+          .nudge-text {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-primary);
+
+            p {
+              margin: 0;
+              font-size: 0.95rem;
+              font-style: italic;
+            }
+          }
+
+          .config-btn {
+            height: 44px;
+            padding: 0 24px;
+            font-weight: 600;
+          }
+        }
       }
     `,
   ],

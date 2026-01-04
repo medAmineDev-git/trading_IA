@@ -24,7 +24,7 @@ MT5_LIVE_BARS = 500            # Number of bars to fetch for live signals
 TIMEZONE_OFFSET_HOURS = 1      # Timezone offset for display (UTC+1 = 1, UTC-5 = -5)
 
 # AI Model Settings
-MODEL_TYPE = 'rf'              # 'rf', 'xgboost', 'lightgbm', or 'ensemble'
+MODEL_TYPE = 'xgboost'          # 'rf', 'xgboost', 'lightgbm', or 'ensemble'
 ENSEMBLE_MODELS = ['rf', 'xgboost', 'lightgbm'] # Models used in ensemble
 MODEL_PATH = os.path.join(BASE_DIR, 'models/gold_signal_model.pkl')
 N_ESTIMATORS = 300             # Reduced from 1000: prevent overfitting

@@ -53,12 +53,12 @@ export class ParametersFormComponent implements OnInit {
     lightgbm:
       "LightGBM is a high-performance gradient boosting framework that is often faster and more memory-efficient than XGBoost.",
     rf: "Random Forest is a reliable bagging model that creates multiple decision trees. It is robust against overfitting but slower to train.",
+    ensemble:
+      "Multi-model Ensemble combines XGBoost, LightGBM, and Random Forest. It uses a voting mechanism to provide the most reliable signals.",
   };
 
   get selectedModelDescription(): string {
-    const type = this.parametersForm
-      ?.get("n_estimators")
-      ?.parent?.get("model_type")?.value;
+    const type = this.parametersForm?.get("model_type")?.value;
     return (
       this.modelDescriptions[type as keyof typeof this.modelDescriptions] || ""
     );
