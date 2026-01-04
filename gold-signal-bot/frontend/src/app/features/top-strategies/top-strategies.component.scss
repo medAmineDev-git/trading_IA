@@ -80,6 +80,33 @@
   }
 }
 
+.sparkline-container {
+  width: 120px;
+  height: 40px;
+  padding: 4px 0;
+}
+
+.detail-btn {
+  background: var(--text-accent) !important;
+  color: white !important;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0 16px;
+  height: 36px;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(146, 98, 249, 0.4);
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+  }
+}
+
 .premium-performer {
   background: linear-gradient(
     to right,

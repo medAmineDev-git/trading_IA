@@ -51,6 +51,21 @@
         </td>
       </ng-container>
 
+      <!-- Metric (Sparkline) Column -->
+      <ng-container matColumnDef="metric">
+        <th mat-header-cell *matHeaderCellDef>Overall Metric</th>
+        <td mat-cell *matCellDef="let strategy">
+          <div class="sparkline-container">
+            <canvas
+              baseChart
+              [data]="strategy.chartData"
+              [options]="sparklineOptions"
+              [type]="'line'"
+            ></canvas>
+          </div>
+        </td>
+      </ng-container>
+
       <!-- Trades Column -->
       <ng-container matColumnDef="trades">
         <th mat-header-cell *matHeaderCellDef>Trades</th>
@@ -103,27 +118,21 @@
         </td>
       </ng-container>
 
-      <!-- Backtest Strategy Column -->
-      <ng-container matColumnDef="backtest">
-        <th mat-header-cell *matHeaderCellDef>Analysis</th>
-        <td mat-cell *matCellDef="let strategy">
-          <button
-            mat-raised-button
-            color="primary"
-            (click)="onBacktest(strategy)"
-            class="analysis-btn"
-          >
-            <mat-icon>analytics</mat-icon>
-            Backtest
-          </button>
-        </td>
-      </ng-container>
-
       <!-- Actions Column -->
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef>Actions</th>
         <td mat-cell *matCellDef="let strategy">
           <div style="display: flex; align-items: center; gap: 12px">
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="onDetail(strategy)"
+              class="detail-btn"
+            >
+              <mat-icon>visibility</mat-icon>
+              Details
+            </button>
+
             <mat-slide-toggle
               [checked]="strategy.is_live"
               (change)="toggleLive(strategy)"
@@ -141,7 +150,7 @@
               (click)="joinTelegram(strategy)"
             >
               <mat-icon>send</mat-icon>
-              Join Signals
+              Signals
             </button>
           </div>
         </td>

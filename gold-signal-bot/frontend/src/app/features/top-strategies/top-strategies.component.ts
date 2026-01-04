@@ -8,6 +8,8 @@ import { MatSlideToggleModule } from "@angular/material/slide-toggle";
 import { MatButtonModule } from "@angular/material/button";
 import { ApiService } from "../../core/services/api.service";
 import { Strategy } from "../../core/models/models";
+import { BaseChartDirective } from "ng2-charts";
+import { ChartConfiguration } from "chart.js";
 
 @Component({
   selector: "app-top-strategies",
@@ -20,6 +22,7 @@ import { Strategy } from "../../core/models/models";
     MatTooltipModule,
     MatSlideToggleModule,
     MatButtonModule,
+    BaseChartDirective,
   ],
   templateUrl: "./top-strategies.component.html",
   styleUrls: ["./top-strategies.component.scss"],
@@ -31,12 +34,12 @@ export class TopStrategiesComponent implements OnInit {
   displayedColumns: string[] = [
     "name",
     "gainPercent",
+    "metric",
     "winRate",
     "profitFactor",
     "trades",
     "age",
     "connectedClients",
-    "backtest",
     "actions",
   ];
 
@@ -74,10 +77,11 @@ export class TopStrategiesComponent implements OnInit {
           return pfB - pfA;
         });
 
-        // Add random connected clients
+        // Add random connected clients and chart data
         this.strategies = sortedData.map((s) => ({
           ...s,
           connectedClients: Math.floor(Math.random() * 401) + 100, // 100 to 500
+          chartData: this.prepareSparklineData(s),
         }));
 
         this.loading = false;
@@ -109,6 +113,50 @@ export class TopStrategiesComponent implements OnInit {
         window.open(res.link, "_blank");
       },
     });
+  }
+
+  prepareSparklineData(strategy: any): ChartConfiguration["data"] {
+    const equityCurve = strategy.backtest.equity_curve || [];
+    const labels = equityCurve.map((_: any, i: number) => i);
+    const data = equityCurve.map((p: any) => p.balance);
+
+    return {
+      labels,
+      datasets: [
+        {
+          data,
+          borderColor: "#00ff88",
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+        },
+      ],
+    };
+  }
+
+  sparklineOptions: ChartConfiguration["options"] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false },
+    },
+    scales: {
+      x: { display: false },
+      y: { display: false },
+    },
+    elements: {
+      line: {
+        borderCapStyle: "round",
+      },
+    },
+  };
+
+  onDetail(strategy: any): void {
+    // In TopStrategiesComponent, strategy.backtest already exists.
+    // We emit it for the dashboard to display the results view.
+    this.backtestSelected.emit(strategy);
   }
 
   getModelClass(type: string | undefined): string {

@@ -174,10 +174,7 @@ export interface Strategy {
     metadata: any;
     timestamp: string;
   };
-  backtest: {
-    metrics: BacktestMetrics;
-    timestamp: string;
-  };
+  backtest: BacktestResults;
 }
 
 export interface User {

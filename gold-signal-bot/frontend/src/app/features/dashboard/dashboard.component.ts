@@ -55,7 +55,7 @@ import { AuthService } from "../../core/services/auth.service";
         *ngIf="selectedStrategy; else mainView"
       >
         <div class="detail-header glass-panel mb-16">
-          <button mat-icon-button (click)="selectedStrategy = null">
+          <button mat-icon-button (click)="closeDetailView()">
             <mat-icon>arrow_back</mat-icon>
           </button>
           <div class="header-info">
@@ -74,10 +74,55 @@ import { AuthService } from "../../core/services/auth.service";
           <mat-divider style="margin: 40px 0"></mat-divider>
 
           <app-backtest-panel
+            *ngIf="!isViewOnly"
             [params]="selectedStrategy.training.params"
             (backtestComplete)="onBacktestComplete($event)"
           >
           </app-backtest-panel>
+
+          <!-- MT5 Subscription Section (Placeholder) -->
+          <div
+            class="mt5-subscription-section glass-panel mt-24"
+            *ngIf="isViewOnly"
+          >
+            <div class="subscription-header">
+              <mat-icon color="accent" class="large-icon"
+                >account_balance_wallet</mat-icon
+              >
+              <div>
+                <h3>Subscribe with MT5</h3>
+                <p>
+                  Connect your MetaTrader 5 account to follow this strategy
+                  automatically.
+                </p>
+              </div>
+            </div>
+
+            <div class="subscription-content">
+              <div class="feature-item">
+                <mat-icon>check_circle</mat-icon>
+                <span>Real-time signal execution</span>
+              </div>
+              <div class="feature-item">
+                <mat-icon>check_circle</mat-icon>
+                <span>Automated risk management</span>
+              </div>
+              <div class="feature-item">
+                <mat-icon>check_circle</mat-icon>
+                <span>Daily performance reports</span>
+              </div>
+
+              <button
+                mat-raised-button
+                color="accent"
+                class="subscribe-btn"
+                disabled
+              >
+                <mat-icon>bolt</mat-icon>
+                Coming Soon - MT5 Integration
+              </button>
+            </div>
+          </div>
 
           <div class="results-container" *ngIf="backtestResults">
             <mat-divider style="margin: 24px 0"></mat-divider>
@@ -580,6 +625,73 @@ import { AuthService } from "../../core/services/auth.service";
           }
         }
       }
+
+      /* MT5 Subscription Section */
+      .mt5-subscription-section {
+        padding: 32px;
+        margin-top: 32px;
+        border-radius: 20px;
+        background: rgba(0, 255, 136, 0.03);
+        border: 1px solid rgba(0, 255, 136, 0.1);
+
+        .subscription-header {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 24px;
+
+          h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #00ff88;
+          }
+
+          p {
+            margin: 4px 0 0 0;
+            color: var(--text-secondary);
+          }
+
+          .large-icon {
+            font-size: 40px;
+            width: 40px;
+            height: 40px;
+            color: #00ff88;
+          }
+        }
+
+        .subscription-content {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          align-items: end;
+
+          .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+
+            mat-icon {
+              color: #00ff88;
+              font-size: 20px;
+              width: 20px;
+              height: 20px;
+            }
+          }
+
+          .subscribe-btn {
+            grid-column: 1 / -1;
+            margin-top: 16px;
+            height: 52px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: linear-gradient(90deg, #00ff88, #00ccff) !important;
+            color: #000 !important;
+            opacity: 0.8;
+          }
+        }
+      }
     `,
   ],
 })
@@ -593,6 +705,7 @@ export class DashboardComponent implements OnInit {
   showParamsCard = false;
   isModelTrained = false;
   isEnsembleModelTrained = false;
+  isViewOnly = false;
   user: User | null = null;
 
   constructor(
@@ -678,7 +791,15 @@ export class DashboardComponent implements OnInit {
 
   onStrategyBacktest(strategy: Strategy) {
     this.selectedStrategy = strategy;
-    this.backtestResults = null; // Reset results when opening new strategy
+    this.isViewOnly = true; // Strategies from this tab are view-only
+    // For Top Strategies, we already have the backtest results in the strategy object
+    this.backtestResults = strategy.backtest || null;
+  }
+
+  closeDetailView() {
+    this.selectedStrategy = null;
+    this.isViewOnly = false;
+    this.backtestResults = null;
   }
 
   onTabChange(index: number) {
