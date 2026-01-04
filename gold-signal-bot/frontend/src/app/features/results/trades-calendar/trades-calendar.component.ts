@@ -47,7 +47,7 @@ export class TradesCalendarComponent implements OnChanges {
       this.processData();
 
       // Set initial view to the last month of data
-      if (this.results.equity_curve.length > 0) {
+      if (this.results?.equity_curve && this.results.equity_curve.length > 0) {
         const lastPoint =
           this.results.equity_curve[this.results.equity_curve.length - 1];
         if (lastPoint.timestamp !== "Start") {
@@ -135,7 +135,7 @@ export class TradesCalendarComponent implements OnChanges {
     // Filter trades for this day
     if (this.results) {
       const dayDateKey = this.formatDateKey(day.date);
-      this.selectedTrades = this.results.trades.filter((trade) => {
+      this.selectedTrades = (this.results.trades || []).filter((trade) => {
         // Use close_timestamp if available, else timestamp
         const tradeDateStr = trade.close_timestamp || trade.timestamp;
         const tradeDate = new Date(tradeDateStr);

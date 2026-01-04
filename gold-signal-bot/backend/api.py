@@ -697,10 +697,7 @@ def save_personal_strategy():
         'owner_id': user_id,
         'is_published': False,
         'training': last_training_info,
-        'backtest': {
-            'metrics': last_backtest_results['metrics'],
-            'timestamp': last_backtest_results['timestamp']
-        },
+        'backtest': last_backtest_results,
         'created_at': datetime.now().isoformat()
     }
     

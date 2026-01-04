@@ -194,10 +194,12 @@ export class ResultsDashboardComponent implements OnChanges {
       const labels: Date[] = [];
       const data: number[] = [];
 
-      this.results?.equity_curve.forEach((point) => {
+      this.results?.equity_curve?.forEach((point) => {
         let dateVal: Date;
         if (point.timestamp === "Start") {
-          dateVal = new Date(this.results!.trades[0]?.timestamp || Date.now());
+          dateVal = new Date(
+            this.results!.trades?.[0]?.timestamp || Date.now()
+          );
         } else {
           dateVal = new Date(point.timestamp);
         }
@@ -270,11 +272,11 @@ export class ResultsDashboardComponent implements OnChanges {
         const ddLabels: Date[] = [];
         const ddData: number[] = [];
 
-        this.results.drawdown_curve.forEach((point: any) => {
+        this.results.drawdown_curve?.forEach((point: any) => {
           let dateVal: Date;
           if (point.timestamp === "Start") {
             dateVal = new Date(
-              this.results!.trades[0]?.timestamp || Date.now()
+              this.results!.trades?.[0]?.timestamp || Date.now()
             );
           } else {
             dateVal = new Date(point.timestamp);
@@ -382,7 +384,7 @@ export class ResultsDashboardComponent implements OnChanges {
       "Pips",
       "Confidence",
     ];
-    const rows = this.results.trades.map((trade) => [
+    const rows = (this.results.trades || []).map((trade) => [
       trade.timestamp,
       trade.type,
       trade.entry_price,
