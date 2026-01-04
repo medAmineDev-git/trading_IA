@@ -148,7 +148,7 @@ export class ResultsDashboardComponent implements OnChanges {
       legend: { display: false },
       title: {
         display: true,
-        text: "Daily Drawdown (%)",
+        text: "Overall Drawdown (%)",
         color: "rgba(255, 255, 255, 0.9)",
         font: { size: 16, weight: "bold" },
       },
@@ -308,7 +308,7 @@ export class ResultsDashboardComponent implements OnChanges {
           labels: ddLabels,
           datasets: [
             {
-              label: "Drawdown (%)",
+              label: "Overall Drawdown (%)",
               data: ddData,
               borderColor: "#f44336",
               borderWidth: 4,

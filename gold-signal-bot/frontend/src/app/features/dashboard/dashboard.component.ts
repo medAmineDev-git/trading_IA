@@ -8,6 +8,7 @@ import { MatDividerModule } from "@angular/material/divider";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { MatSnackBar, MatSnackBarModule } from "@angular/material/snack-bar";
+import { MatSlideToggleModule } from "@angular/material/slide-toggle";
 import { ParametersFormComponent } from "../parameters/parameters-form.component";
 import { TrainingPanelComponent } from "../training/training-panel.component";
 import { BacktestPanelComponent } from "../backtesting/backtest-panel.component";
@@ -39,6 +40,7 @@ import { AuthService } from "../../core/services/auth.service";
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
+    MatSlideToggleModule,
     ParametersFormComponent,
     TrainingPanelComponent,
     BacktestPanelComponent,
@@ -65,11 +67,24 @@ import { AuthService } from "../../core/services/auth.service";
         </div>
 
         <div class="glass-panel detail-content">
-          <app-training-panel
-            [params]="selectedStrategy.training.params"
-            [showTrainButton]="false"
-          >
-          </app-training-panel>
+          <div class="premium-locked-section" [class.locked]="isViewOnly">
+            <div class="premium-badge-overlay" *ngIf="isViewOnly">
+              <mat-icon>lock</mat-icon>
+              <span>Premium Strategy Configuration</span>
+              <mat-slide-toggle
+                [disabled]="true"
+                [checked]="true"
+                color="accent"
+              >
+                Active
+              </mat-slide-toggle>
+            </div>
+            <app-training-panel
+              [params]="selectedStrategy.training.params"
+              [showTrainButton]="false"
+            >
+            </app-training-panel>
+          </div>
 
           <mat-divider style="margin: 40px 0"></mat-divider>
 
@@ -689,6 +704,49 @@ import { AuthService } from "../../core/services/auth.service";
             background: linear-gradient(90deg, #00ff88, #00ccff) !important;
             color: #000 !important;
             opacity: 0.8;
+          }
+        }
+      }
+
+      /* Premium Locked Section */
+      .premium-locked-section {
+        position: relative;
+        transition: all 0.3s ease;
+
+        &.locked {
+          opacity: 0.4;
+          filter: grayscale(0.5) blur(1px);
+          pointer-events: none;
+          user-select: none;
+        }
+
+        .premium-badge-overlay {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 16px;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 215, 0, 0.3);
+          border-radius: 12px;
+          color: #ffd700;
+          font-weight: 600;
+          font-size: 0.85rem;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+          pointer-events: auto;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+
+          mat-slide-toggle {
+            transform: scale(0.8);
           }
         }
       }

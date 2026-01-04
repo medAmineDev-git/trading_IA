@@ -17,100 +17,112 @@
 
 .strategy-table {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 
   th.mat-mdc-header-cell {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffd700;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
     font-weight: 600;
     text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    padding: 20px 16px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  tr.mat-mdc-row:hover {
-    background: rgba(255, 255, 255, 0.08);
+  td.mat-mdc-cell {
+    padding: 20px 16px !important;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  }
+
+  tr.mat-mdc-row {
+    transition: all 0.2s ease;
+    &:hover {
+      background: rgba(255, 255, 255, 0.05) !important;
+      transform: scale(1.002);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
   }
 }
 
-.model-badge {
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.75rem;
+.strategy-name {
   font-weight: 600;
-  text-transform: uppercase;
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+}
 
-  &.xgboost {
-    background: rgba(63, 81, 181, 0.2);
-    color: #3f51b5;
-    border: 1px solid #3f51b5;
-  }
-
-  &.lightgbm {
-    background: rgba(0, 150, 136, 0.2);
-    color: #009688;
-    border: 1px solid #009688;
-  }
-
-  &.rf {
-    background: rgba(156, 39, 176, 0.2);
-    color: #9c27b0;
-    border: 1px solid #9c27b0;
-  }
+.premium-badge {
+  color: #ffd700;
+  font-size: 18px;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 .metric-chip {
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.2);
-  font-family: "Roboto Mono", monospace;
-  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  font-family: "Outfit", sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 
   &.positive {
-    color: #4caf50;
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+    border-color: rgba(0, 255, 136, 0.2);
   }
 
   &.negative {
-    color: #f44336;
+    color: #ff4d4d;
+    background: rgba(255, 77, 77, 0.1);
+    border-color: rgba(255, 77, 77, 0.2);
   }
 }
 
 .sparkline-container {
-  width: 120px;
-  height: 40px;
+  width: 140px;
+  height: 44px;
   padding: 4px 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .detail-btn {
-  background: var(--text-accent) !important;
-  color: white !important;
-  font-weight: 600;
-  border-radius: 8px;
-  padding: 0 16px;
-  height: 36px;
-  
+  height: 40px;
+  padding: 0 20px !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px;
+  background: rgba(146, 98, 249, 0.1) !important;
+  color: #9262f9 !important;
+  border: 1px solid rgba(146, 98, 249, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
   &:hover {
+    background: #9262f9 !important;
+    color: white !important;
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(146, 98, 249, 0.4);
   }
 
   mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    margin-right: 4px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
   }
 }
 
 .premium-performer {
   background: linear-gradient(
     to right,
-    rgba(255, 215, 0, 0.08),
+    rgba(255, 215, 0, 0.03),
     transparent
   ) !important;
   
@@ -123,64 +135,36 @@
   position: absolute;
   top: 0;
   left: 0;
-  bottom: 56px;
+  bottom: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 16px;
 }
 
 .no-data-msg {
   text-align: center;
   padding: 80px 0;
   color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  margin-top: 16px;
 
   mat-icon {
-    font-size: 48px;
-    width: 48px;
-    height: 48px;
-    margin-bottom: 16px;
-    opacity: 0.5;
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 24px;
+    opacity: 0.2;
   }
 
   p {
-    font-size: 1.1rem;
-  }
-}
-
-.live-status-label {
-  font-size: 11px;
-  font-weight: 700;
-  margin-left: 4px;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
-
-  &.active {
-    color: #00ff88;
-    text-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
-  }
-}
-
-.telegram-btn {
-  border-color: #0088cc !important;
-  color: #0088cc !important;
-  font-weight: 600;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: rgba(0, 136, 204, 0.1) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 136, 204, 0.2);
-  }
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    margin-right: 4px;
+    font-size: 1.2rem;
+    font-weight: 300;
   }
 }
 
